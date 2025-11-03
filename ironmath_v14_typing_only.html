@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IronMath v14 — Typing-Only</title>
+<style>
+  :root{
+    --bg:#0e0f12; --panel:#171a1f; --text:#ffffff; --muted:#a8b0bb; --accent:#00bfff;
+    --good:#2ecc71; --bad:#ff5a5f; --input:#22262c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial}
+  #container{width:min(980px,94vw);background:var(--panel);border-radius:18px;padding:28px 36px;box-shadow:0 12px 44px rgba(0,0,0,.55);text-align:center}
+  h1{margin:4px 0 10px;letter-spacing:.5px}
+  .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .note{color:var(--muted);font-size:12px;margin-top:6px}
+  button{border:none;border-radius:12px;background:var(--accent);color:#fff;padding:12px 20px;font-size:16px;cursor:pointer;transition:.15s}
+  button:hover{filter:brightness(.95);transform:translateY(-1px)}
+  .ghost{background:transparent;border:1px solid #32373f}
+  #timerbar{height:14px;width:100%;background:#272c33;border-radius:8px;overflow:hidden;margin:6px 0 12px}
+  #bar{height:100%;width:100%;background:var(--accent);transition:width .1s linear}
+  #question{font-size:clamp(32px,6vw,58px);margin:16px 0 6px;min-height:1.2em}
+  #answer{font-size:clamp(28px,5vw,42px);padding:12px;width:min(340px,60vw);text-align:center;border:none;border-radius:12px;outline:none;background:var(--input);color:#fff;box-shadow:inset 0 0 6px rgba(255,255,255,.12)}
+  .modeTag{display:inline-block;padding:4px 10px;border-radius:999px;background:#20242a;color:#d7dce3;font-size:12px;margin:8px 0 4px}
+  .faded{color:#93a0ad}
+</style>
+</head>
+<body>
+<div id="container">
+  <h1>IronMath</h1>
+  <div id="content"></div>
+</div>
+
+<script>
+const SIGMA_SCALE = 6;
+const STRETCH_MULT = 0.5;
+const WEIGHT_DECAY = 0.88;
+const WEIGHT_STRENGTH = 4;
+const START_STAGE = 8;
+const TIMER_SECONDS = 10;
+const PENALTY_MULT = 2;
+const DUPLICATE_PROTECTION = 25;
+
+let stage=START_STAGE, questionCount=0, correctCount=0;
+let startTime, timerInterval;
+let productWeights = {};
+let penaltySeconds = 0;
+let currentCorrect = "", timeLeft=TIMER_SECONDS, totalTimeSoFar=0, consecutiveMistakes=0;
+let recentAnswers = [];
+
+function setContent(html){ document.getElementById('content').innerHTML = html; }
+function fmt(n, d=1){ return Number(n).toFixed(d); }
+
+function startMenu(){
+  setContent(`
+    <div id="timerbar"><div id="bar" style="width:100%"></div></div>
+    <div class="modeTag">Typing Mode</div>
+    <p class="note">Answer by typing the product. Wrong digits apply a time penalty and shake the prompt.</p>
+    <div class="row" style="margin-top:10px">
+      <button id="btnStart">Start</button>
+    </div>
+  `);
+  document.getElementById('btnStart').onclick = startGame;
+}
+
+function randn(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2.0*Math.log(u))*Math.cos(2*Math.PI*v);}
+function sampleTrunc(minV,maxV,mu,sigma){
+  if(sigma<=0||!isFinite(sigma)) return Math.min(Math.max(mu,minV),maxV);
+  for(let i=0;i<40;i++){
+    const x=mu+sigma*randn();
+    if(x>=minV && x<=maxV) return x;
+  }
+  return Math.min(Math.max(mu,minV),maxV);
+}
+
+function buildPairs(stage){
+  const maxF = Math.floor(stage*(1+STRETCH_MULT));
+  const out=[];
+  for(let a=1;a<=maxF;a++){
+    for(let b=1;b<=maxF;b++){
+      if(a>stage && b>stage) continue;
+      out.push([a,b]);
+    }
+  }
+  return out;
+}
+
+function choosePair(pairs){
+  let minP=Infinity, maxP=-Infinity;
+  const prods = new Array(pairs.length);
+  for(let i=0;i<pairs.length;i++){
+    const p = pairs[i][0]*pairs[i][1];
+    prods[i]=p; if(p<minP)minP=p; if(p>maxP)maxP=p;
+  }
+  const mu = (minP+maxP)/2;
+  const sigma = Math.max(1e-6,(maxP-minP)/SIGMA_SCALE);
+  const target = sampleTrunc(minP,maxP,mu,sigma);
+
+  let bestIdx=-1, bestScore=Infinity, safety=0;
+  while(safety++<500){
+    for(let i=0;i<pairs.length;i++){
+      const p = prods[i];
+      if(recentAnswers.includes(p)) continue;
+      const dist = Math.abs(p - target);
+      const w = (productWeights[p]||0);
+      const score = dist * (1 + WEIGHT_STRENGTH * w);
+      if(score<bestScore){ bestScore=score; bestIdx=i; }
+    }
+    if(bestIdx!==-1) break;
+    recentAnswers.shift();
+  }
+  const [a,b] = pairs[bestIdx];
+  return {a,b,product:a*b};
+}
+
+function bumpProductWeight(prod){
+  for(const k in productWeights){
+    productWeights[k] *= WEIGHT_DECAY;
+    if(productWeights[k] < 1e-4) delete productWeights[k];
+  }
+  productWeights[prod] = (productWeights[prod]||0) + 1;
+}
+
+function shake(el, mult=1){
+  const urgency = 1 - (timeLeft / TIMER_SECONDS);
+  const dur = 0.3 + 0.2*urgency;
+  const baseMag = 8;
+  const mag = baseMag * (1 + 2*urgency) * (1 + 0.3*(mult-1));
+  const t0 = performance.now();
+  (function step(){
+    const dt = performance.now()-t0;
+    if(dt < dur*1000){
+      const p=dt/(dur*1000), k=(1-p);
+      const vertBias = 0.5 + 1.5*urgency;
+      const dx=(Math.random()*2-1)*mag*k;
+      const dy=(Math.random()*2-1)*mag*k*vertBias;
+      el.style.transform=`translate(${dx}px,${dy}px)`;
+      requestAnimationFrame(step);
+    }else{
+      el.style.transform='translate(0,0)';
+    }
+  })();
+}
+
+function startGame(){
+  stage=START_STAGE; questionCount=0; correctCount=0;
+  productWeights={}; penaltySeconds=0; totalTimeSoFar=0; consecutiveMistakes=0; recentAnswers=[];
+  startTime=performance.now();
+  nextQuestion();
+}
+
+function nextQuestion(){
+  setContent(`
+    <div id="timerbar"><div id="bar"></div></div>
+    <div id="question"></div>
+    <input id="answer" type="text" autocomplete="off" inputmode="numeric" aria-label="Answer">
+    <div class="note">Type the product. Wrong digits cost time and shake the prompt.</div>
+  `);
+
+  const pairs = buildPairs(stage);
+  let q; let guard=0;
+  do{ q = choosePair(pairs); guard++; if(guard>1000) break; }while(recentAnswers.includes(q.product));
+  recentAnswers.push(q.product);
+  if(recentAnswers.length > DUPLICATE_PROTECTION) recentAnswers.shift();
+
+  currentCorrect = String(q.product);
+
+  const qEl = document.getElementById('question');
+  qEl.textContent = `${q.a} × ${q.b} = ?`;
+
+  const ans = document.getElementById('answer'); ans.focus();
+
+  const bar = document.getElementById('bar');
+  timeLeft = TIMER_SECONDS; bar.style.width='100%';
+  clearInterval(timerInterval);
+  const qStart = performance.now();
+  timerInterval = setInterval(()=>{
+    timeLeft -= 0.1;
+    if(timeLeft < 0) timeLeft=0;
+    bar.style.width = (timeLeft/TIMER_SECONDS)*100 + '%';
+    if(timeLeft<=0){ clearInterval(timerInterval); gameOver(); }
+  },100);
+
+  ans.addEventListener('keydown',(e)=>{
+    if(e.key==='Enter'){
+      if(ans.value===currentCorrect){ acceptCorrect(); }
+      else{ applyPenalty(); }
+    }
+  });
+  ans.addEventListener('input',(e)=>{
+    const v=e.target.value;
+    if(v===currentCorrect){ acceptCorrect(); }
+    else if(v.length>0 && !currentCorrect.startsWith(v)){
+      applyPenalty(true,e);
+    }
+  });
+
+  function acceptCorrect(){
+    clearInterval(timerInterval);
+    const qEnd = performance.now();
+    totalTimeSoFar += (qEnd - qStart)/1000;
+    bumpProductWeight(q.product);
+    correctCount++; questionCount++; consecutiveMistakes=0;
+
+    const stageSize = 2*stage - 1;
+    if(questionCount >= stageSize*(stage-START_STAGE+1)) stage++;
+
+    nextQuestion();
+  }
+
+  function applyPenalty(fromTyping=false, evt=null){
+    consecutiveMistakes++;
+    const avg = correctCount>0 ? ((totalTimeSoFar + penaltySeconds)/correctCount) : 2.0;
+    const pen = avg * Math.pow(PENALTY_MULT, consecutiveMistakes-1);
+    timeLeft -= pen;
+    penaltySeconds += pen;
+    if(fromTyping && evt){ evt.target.value = evt.target.value.slice(0,-1); }
+    shake(qEl, consecutiveMistakes);
+    if(timeLeft<=0){ clearInterval(timerInterval); gameOver(); }
+  }
+}
+
+function gameOver(){
+  const end=performance.now();
+  const total=(end-startTime)/1000;
+  const totalWithPen = total + penaltySeconds;
+  const avg = total / Math.max(correctCount, 1);
+  const avgPen = totalWithPen / Math.max(correctCount, 1);
+
+  setContent(`
+    <div class="modeTag">Typing Mode</div>
+    <h2 style="color:#ff5a5f;margin-top:6px;">Game Over</h2>
+    <p>Stage reached: ${stage}</p>
+    <p>Questions answered: ${correctCount}</p>
+    <p>Total penalty time: ${fmt(penaltySeconds,1)} s</p>
+    <p>Total time: ${fmt(total,1)} s <span class="faded">(${fmt(totalWithPen,1)} s with penalties)</span></p>
+    <p>Avg time/question: ${fmt(avg,2)} s <span class="faded">(${fmt(avgPen,2)} s with penalties)</span></p>
+    <div class="row" style="margin-top:10px;">
+      <button onclick="startMenu()">Main Menu</button>
+      <button class="ghost" onclick="startGame()">Restart</button>
+    </div>
+  `);
+}
+
+startMenu();
+</script>
+</body>
+</html>
