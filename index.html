@@ -439,34 +439,30 @@ async function gameOver(){
   document.getElementById("viewLeaderboardBtn").addEventListener("click", loadLeaderboard);
 }
 
+// --- Fixed leaderboard function ---
 async function loadLeaderboard() {
   try {
     statusEl.textContent = "Loading leaderboard...";
+    leaderboardContainer.style.display = "block";
 
-    // Query all leaderboard entries
     const q = query(
       collection(db, "leaderboard"),
       orderBy("questionsAnswered", "desc"),
       orderBy("totalTime", "asc")
     );
+
     const snap = await getDocs(q);
 
-    // --- STEP 1: Group by normalized player name ---
     const grouped = {};
-
     snap.forEach(doc => {
       const d = doc.data();
       if (!d.playerName) return;
-
       const key = d.playerName.trim().toLowerCase();
-
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(d);
     });
 
-    // --- STEP 2: Select each player's best run ---
     const bestRuns = Object.values(grouped).map(entries => {
-      // Sort by questions desc, time asc, take top
       return entries.sort((a, b) => {
         if (b.questionsAnswered === a.questionsAnswered)
           return a.totalTime - b.totalTime;
@@ -474,14 +470,12 @@ async function loadLeaderboard() {
       })[0];
     });
 
-    // --- STEP 3: Sort final leaderboard globally ---
     bestRuns.sort((a, b) => {
       if (b.questionsAnswered === a.questionsAnswered)
         return a.totalTime - b.totalTime;
       return b.questionsAnswered - a.questionsAnswered;
     });
 
-    // --- STEP 4: Render leaderboard ---
     tbody.innerHTML = "";
     let rank = 1;
     for (const d of bestRuns.slice(0, 100)) {
@@ -502,6 +496,7 @@ async function loadLeaderboard() {
     statusEl.textContent = "Failed to load leaderboard: " + err.message;
   }
 }
+</script>
 
 </script>
 </body>
