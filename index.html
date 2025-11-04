@@ -85,7 +85,7 @@
   <div id="end-screen">
     <h2>Game Over</h2>
     <p id="finalStats"></p>
-    <button onclick="location.reload()">Restart</button>
+    <button id="restartBtn">Restart</button>
     <button id="viewLeaderboardBtn">View Leaderboard</button>
 
     <div id="leaderboardContainer" style="display:none; margin-top:20px;">
@@ -285,7 +285,20 @@ const firebaseConfig = {
         <strong>Penalty Time:</strong> ${penaltyTime.toFixed(2)} s<br>
         <strong>Session ID:</strong> ${sessionId}
       `;
-
+document.getElementById("restartBtn").addEventListener("click", () => {
+  // Reset key variables but keep the signed-in user
+  stage = 8;
+  totalQuestions = 0;
+  correctAnswers = 0;
+  totalTime = 0;
+  penaltyTime = 0;
+  avgTime = 0;
+  running = false;
+  recentAnswers = [];
+  endScreen.style.display = "none";
+  gameContainer.style.display = "block";
+  startGame();
+});
       uploadSession();
     }
 
