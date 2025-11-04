@@ -108,11 +108,14 @@
   <!-- Firebase + Game Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getAuth,
-      OAuthProvider,
-      signInWithPopup
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getAuth,
+  OAuthProvider,
+  signInWithPopup,
+  setPersistence,
+  browserLocalPersistence,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore,
       collection,
@@ -135,6 +138,17 @@ const firebaseConfig = {
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    // Keep user logged in across refreshes
+setPersistence(auth, browserLocalPersistence);
+
+// If already signed in, skip login screen
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    playerName = user.displayName || parseEmailToName(user.email);
+    loginScreen.style.display = "none";
+    startGame();
+  }
+});
     const db = getFirestore(app);
 
     const loginScreen = document.getElementById("login-screen");
