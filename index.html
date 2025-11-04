@@ -447,64 +447,87 @@ async function gameOver(){
 }
 
 // --- Fixed leaderboard function ---
-async function loadLeaderboard() {
-  try {
-    statusEl.textContent = "Loading leaderboard...";
-    leaderboardContainer.style.display = "block";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    getDocs,
+    query,
+    orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const q = query(
-      collection(db, "leaderboard"),
-      orderBy("questionsAnswered", "desc"),
-      orderBy("totalTime", "asc")
-    );
+  const firebaseConfig = {
+    // your Firebase config here
+  };
 
-    const snap = await getDocs(q);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    const grouped = {};
-    snap.forEach(doc => {
-      const d = doc.data();
-      if (!d.playerName) return;
-      const key = d.playerName.trim().toLowerCase();
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(d);
-    });
+  const viewBtn = document.getElementById("viewLeaderboardBtn");
+  const leaderboardContainer = document.getElementById("leaderboardContainer");
+  const tbody = document.querySelector("#leaderboardContainer tbody");
+  const statusEl = document.getElementById("leaderboardStatus");
 
-    const bestRuns = Object.values(grouped).map(entries => {
-      return entries.sort((a, b) => {
+  viewBtn?.addEventListener("click", loadLeaderboard);
+
+  async function loadLeaderboard() {
+    try {
+      statusEl.textContent = "Loading leaderboard...";
+      leaderboardContainer.style.display = "block";
+
+      const q = query(
+        collection(db, "leaderboard"),
+        orderBy("questionsAnswered", "desc"),
+        orderBy("totalTime", "asc")
+      );
+
+      const snap = await getDocs(q);
+
+      const grouped = {};
+      snap.forEach(doc => {
+        const d = doc.data();
+        if (!d.playerName) return;
+        const key = d.playerName.trim().toLowerCase();
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(d);
+      });
+
+      const bestRuns = Object.values(grouped).map(entries => {
+        return entries.sort((a, b) => {
+          if (b.questionsAnswered === a.questionsAnswered)
+            return a.totalTime - b.totalTime;
+          return b.questionsAnswered - a.questionsAnswered;
+        })[0];
+      });
+
+      bestRuns.sort((a, b) => {
         if (b.questionsAnswered === a.questionsAnswered)
           return a.totalTime - b.totalTime;
         return b.questionsAnswered - a.questionsAnswered;
-      })[0];
-    });
+      });
 
-    bestRuns.sort((a, b) => {
-      if (b.questionsAnswered === a.questionsAnswered)
-        return a.totalTime - b.totalTime;
-      return b.questionsAnswered - a.questionsAnswered;
-    });
+      tbody.innerHTML = "";
+      let rank = 1;
+      for (const d of bestRuns.slice(0, 100)) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${rank++}</td>
+          <td>${d.playerName}</td>
+          <td>${d.stageReached ?? "?"}</td>
+          <td>${d.questionsAnswered ?? "?"}</td>
+          <td>${(d.totalTime ?? 0).toFixed(2)}</td>
+        `;
+        tbody.appendChild(row);
+      }
 
-    tbody.innerHTML = "";
-    let rank = 1;
-    for (const d of bestRuns.slice(0, 100)) {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${rank++}</td>
-        <td>${d.playerName}</td>
-        <td>${d.stageReached ?? "?"}</td>
-        <td>${d.questionsAnswered ?? "?"}</td>
-        <td>${(d.totalTime ?? 0).toFixed(2)}</td>
-      `;
-      tbody.appendChild(row);
+      statusEl.textContent = "";
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Failed to load leaderboard: " + err.message;
     }
-
-    statusEl.textContent = "";
-  } catch (err) {
-    console.error(err);
-    statusEl.textContent = "Failed to load leaderboard: " + err.message;
   }
-}
 </script>
 
-</script>
 </body>
 </html>
