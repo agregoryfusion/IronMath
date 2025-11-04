@@ -3,15 +3,19 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>IronMath v15 — Firebase Batching (Typing Only)</title>
+<title>IronMath — Microsoft SSO + Firebase</title>
 <style>
   :root{
     --bg:#0e0f12; --panel:#171a1f; --text:#ffffff; --muted:#a8b0bb; --accent:#00bfff;
     --good:#2ecc71; --bad:#ff5a5f; --input:#22262c;
   }
   *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial}
-  #container{width:min(980px,94vw);background:var(--panel);border-radius:18px;padding:28px 36px;box-shadow:0 12px 44px rgba(0,0,0,.55);text-align:center}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial}
+  #signin{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;gap:14px}
+  #ms-btn{background:#0078d4;border:none;color:#fff;border-radius:8px;padding:12px 18px;font-size:16px;cursor:pointer}
+  #ms-btn:hover{background:#005ea6}
+  #signedin{position:fixed;top:10px;right:14px;color:#c5d2df;font-size:12px}
+  #container{display:none;width:min(980px,94vw);margin:30px auto;background:var(--panel);border-radius:18px;padding:28px 36px;box-shadow:0 12px 44px rgba(0,0,0,.55);text-align:center}
   h1{margin:4px 0 10px;letter-spacing:.5px}
   .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
   .note{color:var(--muted);font-size:12px;margin-top:6px}
@@ -26,17 +30,35 @@
   .faded{color:#93a0ad}
   #sid{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#c8e6ff}
   #uploadStatus{font-size:12px;color:#a8b0bb;margin-top:6px}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{border-bottom:1px solid #2a2f37;padding:6px 8px;text-align:center}
+  th{color:var(--accent)}
 </style>
 </head>
 <body>
+
+<!-- Sign-in gate -->
+<div id="signin">
+  <h1>IronMath</h1>
+  <p class="note">Please sign in with your Microsoft account to continue.</p>
+  <button id="ms-btn">Sign in with Microsoft</button>
+  <div id="signin-status" class="note"></div>
+</div>
+
+<div id="signedin"></div>
+
+<!-- Game container (hidden until signed in) -->
 <div id="container">
   <h1>IronMath</h1>
   <div id="content"></div>
 </div>
 
-<!-- Firebase SDKs -->
 <script type="module">
-// ======== Fill this with your own Firebase web config ========
+// ===== Firebase SDKs =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, signInWithPopup, OAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyBUaOrUckCuTrc9MHB9jCF4TUsx-hWFC7g",
   authDomain: "ironmath-1263b.firebaseapp.com",
@@ -47,40 +69,52 @@ const firebaseConfig = {
   measurementId: "G-0VCM7C1HPC"
 };
 
-let app = null, db = null;
-async function ensureFirebase(){
-  if(!firebaseConfig || !firebaseConfig.projectId){
-    console.warn("Firebase config missing. Upload disabled.");
-    return;
-  }
-  if(app && db) return;
-  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js");
-  const { getFirestore } = await import("https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js");
-  app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+// init
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new OAuthProvider('microsoft.com');
+
+const signin = document.getElementById('signin');
+const msBtn = document.getElementById('ms-btn');
+const signinStatus = document.getElementById('signin-status');
+const container = document.getElementById('container');
+const signedin = document.getElementById('signedin');
+
+function formatNameFromEmail(email){
+  const base = email.split('@')[0];
+  const parts = base.split(/[._-]+/).filter(Boolean);
+  return parts.map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(' ');
 }
 
-async function saveSessionDoc(sessionId, payload){
-  try{
-    await ensureFirebase();
-    if(!db){
-      return { ok:false, error:"No Firebase config provided (upload skipped)." };
-    }
-    const { doc, setDoc, collection } = await import("https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js");
-    const ref = doc(collection(db, "sessions"), sessionId);
-    await setDoc(ref, payload, { merge:false });
-    return { ok:true };
-  }catch(err){
-    console.error(err);
-    return { ok:false, error: err?.message || String(err) };
-  }
+function showGameUI(user){
+  const name = user.displayName || (user.email ? formatNameFromEmail(user.email) : "Player");
+  localStorage.setItem("ironmathUser", name);
+  signedin.textContent = "Signed in as: " + name;
+  signin.style.display = 'none';
+  container.style.display = 'block';
+  // boot the game after sign-in
+  startMenu();
 }
+
+onAuthStateChanged(auth, (user)=>{
+  if(user){ showGameUI(user); }
+});
+
+msBtn.addEventListener('click', async ()=>{
+  try{
+    await signInWithPopup(auth, provider);
+  }catch(e){
+    console.error(e);
+    signinStatus.textContent = "Sign-in failed: " + (e?.message || e);
+  }
+});
 
 /* ========================= Tunables ========================= */
-const SIGMA_SCALE = 6;
-const STRETCH_MULT = 0.5;
-const WEIGHT_DECAY = 0.88;
-const WEIGHT_STRENGTH = 4;
+const SIGMA_SCALE = 6;       // distribution width (higher = flatter)
+const STRETCH_MULT = 0.5;    // one factor can be up to stage*(1+STRETCH_MULT)
+const WEIGHT_DECAY = 0.88;   // repeat memory decay
+const WEIGHT_STRENGTH = 4;   // sensitivity to repeat weights
 const START_STAGE = 8;
 const TIMER_SECONDS = 10;
 const PENALTY_MULT = 2;
@@ -93,8 +127,6 @@ let productWeights = {};
 let penaltySeconds = 0;
 let currentCorrect = "", timeLeft=TIMER_SECONDS, totalTimeSoFar=0, consecutiveMistakes=0;
 let recentAnswers = [];
-
-// session batching
 let runData = null;
 let qStart = 0;
 let currentA=0, currentB=0;
@@ -110,7 +142,7 @@ function startMenu(){
   setContent(`
     <div id="timerbar"><div id="bar" style="width:100%"></div></div>
     <div class="modeTag">Typing Mode</div>
-    <p class="note">No microphone required. Answer by typing the product. Wrong digits apply a time penalty and shake the prompt.</p>
+    <p class="note">Answer by typing the product. Wrong digits apply a time penalty and shake the prompt.</p>
     <div class="row" style="margin-top:10px">
       <button id="btnStart">Start</button>
     </div>
@@ -128,6 +160,12 @@ function sampleTrunc(minV,maxV,mu,sigma){
   }
   return Math.min(Math.max(mu,minV),maxV);
 }
+function shortID(len = 6) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let out = '';
+  for (let i = 0; i < len; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+  return out;
+}
 
 function buildPairs(stage){
   const maxF = Math.floor(stage*(1+STRETCH_MULT));
@@ -140,16 +178,6 @@ function buildPairs(stage){
   }
   return out;
 }
-
-function shortID(len = 6) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let out = '';
-  for (let i = 0; i < len; i++) {
-    out += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return out;
-}
-
 function choosePair(pairs){
   let minP=Infinity, maxP=-Infinity;
   const prods = new Array(pairs.length);
@@ -177,7 +205,6 @@ function choosePair(pairs){
   const [a,b] = pairs[bestIdx];
   return {a,b,product:a*b};
 }
-
 function bumpProductWeight(prod){
   for(const k in productWeights){
     productWeights[k] *= WEIGHT_DECAY;
@@ -186,6 +213,7 @@ function bumpProductWeight(prod){
   productWeights[prod] = (productWeights[prod]||0) + 1;
 }
 
+/* ========================= Shake ========================= */
 function shake(el, mult=1){
   const urgency = 1 - (timeLeft / TIMER_SECONDS);
   const dur = 0.3 + 0.2*urgency;
@@ -207,12 +235,14 @@ function shake(el, mult=1){
   })();
 }
 
+/* ========================= Game Flow ========================= */
 function startGame(){
   stage=START_STAGE; questionCount=0; correctCount=0;
   productWeights={}; penaltySeconds=0; totalTimeSoFar=0; consecutiveMistakes=0; recentAnswers=[];
 
+  const sessionID = shortID(6);
   runData = {
-    sessionID: shortID(6),
+    sessionID,
     startTime: Date.now(),
     settings: {
       SIGMA_SCALE, STRETCH_MULT, WEIGHT_DECAY, WEIGHT_STRENGTH,
@@ -247,7 +277,7 @@ function nextQuestion(){
   currentCorrect = String(q.product);
 
   const qEl = document.getElementById('question');
-  qEl.textContent = `${q.a} × ${q.b} = ?`;
+  qEl.textContent = `${q.a} × ${q.b} = ? (Stage ${stage})`;
 
   const ans = document.getElementById('answer'); ans.focus();
 
@@ -266,7 +296,7 @@ function nextQuestion(){
       clearInterval(timerInterval);
       if(!loggedThisQuestion){
         const tTaken = (performance.now()-qStart)/1000;
-        runData.results.push({ a: currentA, b: currentB, timeTaken: tTaken, mistakes: mistakesThisQuestion, success: false });
+        runData.results.push({ a: currentA, b: currentB, stage: stage, timeTaken: tTaken, mistakes: mistakesThisQuestion, success: false });
         loggedThisQuestion = true;
       }
       gameOver();
@@ -317,7 +347,7 @@ function nextQuestion(){
       clearInterval(timerInterval);
       if(!loggedThisQuestion){
         const tTaken = (performance.now()-qStart)/1000;
-        runData.results.push({ a: currentA, b: currentB, stage: stage,timeTaken: tTaken, mistakes: mistakesThisQuestion, success: false });
+        runData.results.push({ a: currentA, b: currentB, stage: stage, timeTaken: tTaken, mistakes: mistakesThisQuestion, success: false });
         loggedThisQuestion = true;
       }
       gameOver();
@@ -331,9 +361,12 @@ async function gameOver(){
   const totalWithPen = total + penaltySeconds;
   const avg = total / Math.max(correctCount, 1);
   const avgPen = totalWithPen / Math.max(correctCount, 1);
+  const playerName = localStorage.getItem('ironmathUser') || 'Player';
 
+  // Prepare session payload
   const payload = {
     sessionID: runData.sessionID,
+    playerName, // <-- name appended
     startTime: runData.startTime,
     endTime: Date.now(),
     stageReached: stage,
@@ -346,9 +379,11 @@ async function gameOver(){
       ua: navigator.userAgent,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone || null
     },
-    reviewed: false
+    reviewed: false,
+    dateAdded: Date.now()
   };
 
+  // Render end screen with leaderboard viewer button
   setContent(`
     <div class="modeTag">Typing Mode</div>
     <h2 style="color:#ff5a5f;margin-top:6px;">Game Over</h2>
@@ -357,28 +392,82 @@ async function gameOver(){
     <p>Total penalty time: ${fmt(penaltySeconds,1)} s</p>
     <p>Total time: ${fmt(total,1)} s <span class="faded">(${fmt(totalWithPen,1)} s with penalties)</span></p>
     <p>Avg time/question: ${fmt(avg,2)} s <span class="faded">(${fmt(avgPen,2)} s with penalties)</span></p>
-    <p id="uploadStatus" class="note">Uploading…</p>
-    <p class="note">Session ID: <span id="sid"></span></p>
+    <p class="note">Session ID: <span id="sid">${runData.sessionID}</span></p>
+    <div id="uploadStatus" class="note">Uploading…</div>
     <div class="row" style="margin-top:10px;">
-      <button onclick="startMenu()">Main Menu</button>
-      <button class="ghost" onclick="startGame()">Restart</button>
+      <button class="ghost" onclick="startMenu()">Main Menu</button>
+      <button onclick="location.reload()">Restart</button>
+      <button id="viewLeaderboardBtn">View Leaderboard</button>
     </div>
+    <div id="leaderboardContainer"></div>
   `);
-  document.getElementById('sid').textContent = runData.sessionID;
 
-  const res = await saveSessionDoc(runData.sessionID, payload);
-  const el = document.getElementById('uploadStatus');
-  if(res.ok){
-    el.textContent = "Saved to Firebase ✓";
-    el.style.color = "#7fdca2";
-  }else{
-    el.textContent = "Upload skipped/failed: " + res.error;
-    el.style.color = "#ff9f9f";
+  // Upload to sessions and leaderboard
+  try{
+    const sRef = doc(collection(db, "sessions"), runData.sessionID);
+    await setDoc(sRef, payload, { merge:false });
+
+    // Also add to leaderboard automatically
+    const lbDoc = {
+      sessionID: runData.sessionID,
+      playerName,
+      stageReached: payload.stageReached,
+      totalTime: payload.totalTime,
+      penaltyTime: payload.penaltyTime,
+      questionsAnswered: payload.questionsAnswered,
+      dateAdded: payload.dateAdded
+    };
+    await addDoc(collection(db, "leaderboard"), lbDoc);
+
+    document.getElementById('uploadStatus').textContent = "Saved to Firebase ✓";
+    document.getElementById('uploadStatus').style.color = "#7fdca2";
+  }catch(e){
+    console.error(e);
+    document.getElementById('uploadStatus').textContent = "Upload failed: " + (e?.message || e);
+    document.getElementById('uploadStatus').style.color = "#ff9f9f";
+  }
+
+  // Leaderboard viewer
+  document.getElementById("viewLeaderboardBtn").addEventListener("click", loadLeaderboard);
+}
+
+async function loadLeaderboard(){
+  try {
+    const qy = query(collection(db, "leaderboard"),
+      orderBy("questionsAnswered", "desc"),
+      orderBy("totalTime", "asc"),
+      limit(50)
+    );
+    const snap = await getDocs(qy);
+    if (snap.empty){
+      document.getElementById("leaderboardContainer").innerHTML = "<p class='note'>No leaderboard data yet.</p>";
+      return;
+    }
+    let html = "<table><tr><th>#</th><th>Name</th><th>Stage</th><th>Qs</th><th>Time (s)</th><th>Date</th></tr>";
+    let rank=1;
+    snap.forEach(docSnap=>{
+      const d = docSnap.data();
+      const date = d.dateAdded ? new Date(d.dateAdded) : null;
+      const mm = date ? String(date.getMonth()+1).padStart(2,"0") : "--";
+      const dd = date ? String(date.getDate()).padStart(2,"0") : "--";
+      const yyyy = date ? date.getFullYear() : "----";
+      html += `<tr>
+        <td>${rank++}</td>
+        <td>${d.playerName || "???"}</td>
+        <td>${d.stageReached ?? "?"}</td>
+        <td>${d.questionsAnswered ?? "?"}</td>
+        <td>${(d.totalTime ?? 0).toFixed(2)}</td>
+        <td>${mm}/${dd}/${yyyy}</td>
+      </tr>`;
+    });
+    html += "</table>";
+    document.getElementById("leaderboardContainer").innerHTML = html;
+  } catch (e) {
+    console.error(e);
+    document.getElementById("leaderboardContainer").innerHTML = "<p style='color:#ff5a5f'>Failed to load leaderboard.</p>";
   }
 }
 
-/* boot */
-startMenu();
 </script>
 </body>
 </html>
