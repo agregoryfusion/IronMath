@@ -409,13 +409,20 @@ onAuthStateChanged(auth, (user) => {
       const perQ = (trueTotal / correctAnswers).toFixed(2);
       const perQmod = (modTotal / correctAnswers).toFixed(2);
 
-      finalStats.innerHTML = `
-        <strong>Stage:</strong> ${stage}<br>
-        <strong>Questions:</strong> ${correctAnswers}<br>
-        <strong>Total Time:</strong> ${trueTotal.toFixed(2)} s <span style="color:#888;">(${modTotal.toFixed(2)} s w/ penalty)</span><br>
-        <strong>Time/Question:</strong> ${perQ} s <span style="color:#888;">(${perQmod} s w/ penalty)</span><br>
-        <strong>Penalty Time:</strong> ${penaltyTime.toFixed(2)} s<br>
-        <strong>Session ID:</strong> ${sessionId}
+// Update individual end screen elements
+document.getElementById("end-stage").textContent = `Stage reached: ${stage}`;
+document.getElementById("end-questions").textContent = `Questions answered: ${correctAnswers}`;
+document.getElementById("end-penalty").textContent = `Total penalty time: ${penaltyTime.toFixed(2)} s`;
+
+document.getElementById("end-total").innerHTML =
+  `Total time: ${trueTotal.toFixed(2)} s (<span id="end-with-penalty">${modTotal.toFixed(2)}</span> s with penalties)`;
+
+document.getElementById("end-avg").innerHTML =
+  `Avg time/question: ${perQ} s (<span id="end-avg-with-penalty">${perQmod}</span> s with penalties)`;
+
+document.getElementById("session-id").textContent = `Session ID: ${sessionId}`;
+document.getElementById("saved-status").textContent = "Saved to Firebase ✓";
+
       `;
 document.getElementById("restartBtn").addEventListener("click", () => {
   // Reset key variables but keep the signed-in user
@@ -430,6 +437,15 @@ document.getElementById("restartBtn").addEventListener("click", () => {
   endScreen.style.display = "none";
   gameContainer.style.display = "block";
   startGame();
+});
+  document.getElementById("viewLeaderboardBtn").addEventListener("click", () => {
+  const leaderboard = document.getElementById("leaderboardContainer");
+  const isVisible = leaderboard.style.display === "block";
+  leaderboard.style.display = isVisible ? "none" : "block";
+
+  if (!isVisible) {
+    loadLeaderboard();
+  }
 });
       uploadSession();
     }
