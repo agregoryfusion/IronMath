@@ -395,28 +395,24 @@ async function gameOver(){
     <p class="note">Session ID: <span id="sid">${runData.sessionID}</span></p>
     <div id="uploadStatus" class="note">Uploading…</div>
     <div class="row" style="margin-top:10px;">
-      <button class="ghost" onclick="startMenu()">Main Menu</button>
-      <button onclick="location.reload()">Restart</button>
-      <button id="viewLeaderboardBtn">View Leaderboard</button>
-    </div>
-    <div id="leaderboardContainer" style="display:none;">
-</div>
-<button id="viewLeaderboardBtn">View Leaderboard</button>
+<button onclick="location.reload()">Restart</button>
+  <button id="viewLeaderboardBtn">View Leaderboard</button>
 
-<div id="leaderboardContainer" style="display:none; margin-top:20px;">
-  <p id="leaderboardStatus" style="color:#ccc;"></p>
-  <table style="width:100%; text-align:center; border-collapse:collapse;">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Player</th>
-        <th>Stage</th>
-        <th>Questions</th>
-        <th>Time (s)</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div id="leaderboardContainer" style="display:none; margin-top:20px;">
+    <p id="leaderboardStatus" style="color:#ccc;"></p>
+    <table style="width:100%; text-align:center; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Player</th>
+          <th>Stage</th>
+          <th>Questions</th>
+          <th>Time (s)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </div>
 
   `);
