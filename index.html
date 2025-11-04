@@ -434,40 +434,53 @@ async function gameOver(){
 async function loadLeaderboard() {
   try {
     statusEl.textContent = "Loading leaderboard...";
-    const q = query(collection(db, "leaderboard"), orderBy("questionsAnswered", "desc"), orderBy("totalTime", "asc"));
+
+    // Query all leaderboard entries
+    const q = query(
+      collection(db, "leaderboard"),
+      orderBy("questionsAnswered", "desc"),
+      orderBy("totalTime", "asc")
+    );
     const snap = await getDocs(q);
 
-    // Track best record per player
-    const bestByPlayer = {};
+    // --- STEP 1: Group by normalized player name ---
+    const grouped = {};
 
     snap.forEach(doc => {
       const d = doc.data();
-      const name = d.playerName || "???";
-      const existing = bestByPlayer[name];
+      if (!d.playerName) return;
 
-      // Keep whichever has higher questionsAnswered, or faster totalTime if tied
-      if (!existing ||
-          d.questionsAnswered > existing.questionsAnswered ||
-          (d.questionsAnswered === existing.questionsAnswered && d.totalTime < existing.totalTime)) {
-        bestByPlayer[name] = d;
-      }
+      const key = d.playerName.trim().toLowerCase();
+
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(d);
     });
 
-    // Convert to sorted array
-    const sorted = Object.values(bestByPlayer).sort((a, b) => {
+    // --- STEP 2: Select each player's best run ---
+    const bestRuns = Object.values(grouped).map(entries => {
+      // Sort by questions desc, time asc, take top
+      return entries.sort((a, b) => {
+        if (b.questionsAnswered === a.questionsAnswered)
+          return a.totalTime - b.totalTime;
+        return b.questionsAnswered - a.questionsAnswered;
+      })[0];
+    });
+
+    // --- STEP 3: Sort final leaderboard globally ---
+    bestRuns.sort((a, b) => {
       if (b.questionsAnswered === a.questionsAnswered)
         return a.totalTime - b.totalTime;
       return b.questionsAnswered - a.questionsAnswered;
     });
 
-    // Render
+    // --- STEP 4: Render leaderboard ---
     tbody.innerHTML = "";
     let rank = 1;
-    for (const d of sorted.slice(0, 100)) {
+    for (const d of bestRuns.slice(0, 100)) {
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>${rank++}</td>
-        <td>${d.playerName || "???"}</td>
+        <td>${d.playerName}</td>
         <td>${d.stageReached ?? "?"}</td>
         <td>${d.questionsAnswered ?? "?"}</td>
         <td>${(d.totalTime ?? 0).toFixed(2)}</td>
@@ -481,6 +494,7 @@ async function loadLeaderboard() {
     statusEl.textContent = "Failed to load leaderboard: " + err.message;
   }
 }
+
 </script>
 </body>
 </html>
