@@ -39,7 +39,103 @@
 #game-container, #end-screen, #leaderboardContainer {
   display: none;
 }
+#leaderboardContainer {
+  display: none;
+  margin: 40px auto;
+  text-align: center;
+  max-width: 800px;
+}
 
+#leaderboardContainer table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+#leaderboardContainer th, #leaderboardContainer td {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  text-align: center;
+}
+
+#leaderboardContainer th {
+  color: #1e90ff;
+  font-weight: 600;
+  border-bottom: 2px solid #1e90ff33;
+}
+
+#leaderboardContainer td {
+  color: #ddd;
+}
+
+#leaderboardContainer tr:hover td {
+  background: #1e90ff22;
+}
+    
+    #end-screen {
+  display: none;
+  text-align: center;
+  margin-top: 80px;
+  color: white;
+}
+
+#end-screen h2 {
+  color: #1e90ff;
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+#end-screen h3 {
+  color: #ff4d4d;
+  margin-top: 0;
+  font-size: 28px;
+}
+
+#end-screen p {
+  margin: 5px 0;
+  font-size: 18px;
+}
+
+#end-screen .mode-label {
+  background: #222;
+  border: 1px solid #1e90ff;
+  color: #1e90ff;
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+#end-screen button {
+  background: #1e90ff;
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 6px;
+  margin: 10px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+#end-screen button:hover {
+  background: #00bfff;
+}
+
+#session-id {
+  color: #aaa;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+#saved-status {
+  color: #00ff90;
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+    
 #question {
   font-size: 48px;
   font-weight: bold;
@@ -109,29 +205,24 @@
 </div>
 
 
-  <!-- End Screen -->
-  <div id="end-screen">
-    <h2>Game Over</h2>
-    <p id="finalStats"></p>
-    <button id="restartBtn">Restart</button>
-    <button id="viewLeaderboardBtn">View Leaderboard</button>
+<div id="end-screen">
+  <h2>IronMath</h2>
+  <div class="mode-label">Typing Mode</div>
+  <h3>Game Over</h3>
 
-    <div id="leaderboardContainer" style="display:none; margin-top:20px;">
-      <p id="leaderboardStatus" style="color:#ccc;"></p>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Player</th>
-            <th>Stage</th>
-            <th>Questions</th>
-            <th>Time (s)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
+  <p id="end-stage">Stage reached: —</p>
+  <p id="end-questions">Questions answered: —</p>
+  <p id="end-penalty">Total penalty time: — s</p>
+  <p id="end-total">Total time: — s (<span id="end-with-penalty">—</span> s with penalties)</p>
+  <p id="end-avg">Avg time/question: — s (<span id="end-avg-with-penalty">—</span> s with penalties)</p>
+
+  <p id="session-id"></p>
+  <p id="saved-status"></p>
+
+  <button id="restartBtn">Restart</button>
+  <button id="viewLeaderboardBtn">View Leaderboard</button>
+</div>
+
 
   <!-- Firebase + Game Logic -->
   <script type="module">
