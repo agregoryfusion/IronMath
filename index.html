@@ -255,8 +255,10 @@ const firebaseConfig = {
 };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    // Keep user logged in across refreshes
+const auth = getAuth(app);
+const provider = new OAuthProvider("microsoft.com");
+
+// Keep users logged in across refreshes
 setPersistence(auth, browserLocalPersistence);
 
 // If already signed in, skip login screen
@@ -264,9 +266,14 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     playerName = user.displayName || parseEmailToName(user.email);
     loginScreen.style.display = "none";
+    gameContainer.style.display = "block";
     startGame();
+  } else {
+    loginScreen.style.display = "block";
+    gameContainer.style.display = "none";
   }
 });
+
     const db = getFirestore(app);
 
     const loginScreen = document.getElementById("login-screen");
@@ -311,7 +318,6 @@ onAuthStateChanged(auth, (user) => {
 
     // --- Microsoft Login ---
     loginBtn.addEventListener("click", async () => {
-      const provider = new OAuthProvider("microsoft.com");
       try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
