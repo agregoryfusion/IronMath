@@ -431,42 +431,57 @@ async function gameOver(){
   document.getElementById("viewLeaderboardBtn").addEventListener("click", loadLeaderboard);
 }
 
-async function loadLeaderboard(){
+async function loadLeaderboard() {
   try {
-    const qy = query(collection(db, "leaderboard"),
-      orderBy("questionsAnswered", "desc"),
-      orderBy("totalTime", "asc"),
-      limit(50)
-    );
-    const snap = await getDocs(qy);
-    if (snap.empty){
-      document.getElementById("leaderboardContainer").innerHTML = "<p class='note'>No leaderboard data yet.</p>";
-      return;
-    }
-    let html = "<table><tr><th>#</th><th>Name</th><th>Stage</th><th>Qs</th><th>Time (s)</th><th>Date</th></tr>";
-    let rank=1;
-    snap.forEach(docSnap=>{
-      const d = docSnap.data();
-      const date = d.dateAdded ? new Date(d.dateAdded) : null;
-      const mm = date ? String(date.getMonth()+1).padStart(2,"0") : "--";
-      const dd = date ? String(date.getDate()).padStart(2,"0") : "--";
-      const yyyy = date ? date.getFullYear() : "----";
-      html += `<tr>
+    statusEl.textContent = "Loading leaderboard...";
+    const q = query(collection(db, "leaderboard"), orderBy("questionsAnswered", "desc"), orderBy("totalTime", "asc"));
+    const snap = await getDocs(q);
+
+    // Track best record per player
+    const bestByPlayer = {};
+
+    snap.forEach(doc => {
+      const d = doc.data();
+      const name = d.playerName || "???";
+      const existing = bestByPlayer[name];
+
+      // Keep whichever has higher questionsAnswered, or faster totalTime if tied
+      if (!existing ||
+          d.questionsAnswered > existing.questionsAnswered ||
+          (d.questionsAnswered === existing.questionsAnswered && d.totalTime < existing.totalTime)) {
+        bestByPlayer[name] = d;
+      }
+    });
+
+    // Convert to sorted array
+    const sorted = Object.values(bestByPlayer).sort((a, b) => {
+      if (b.questionsAnswered === a.questionsAnswered)
+        return a.totalTime - b.totalTime;
+      return b.questionsAnswered - a.questionsAnswered;
+    });
+
+    // Render
+    tbody.innerHTML = "";
+    let rank = 1;
+    for (const d of sorted.slice(0, 100)) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
         <td>${rank++}</td>
         <td>${d.playerName || "???"}</td>
         <td>${d.stageReached ?? "?"}</td>
         <td>${d.questionsAnswered ?? "?"}</td>
         <td>${(d.totalTime ?? 0).toFixed(2)}</td>
-        <td>${mm}/${dd}/${yyyy}</td>
-      </tr>`;
-    });
-    html += "</table>";
-    document.getElementById("leaderboardContainer").innerHTML = html;
-  } catch (e) {
-    console.error(e);
-    document.getElementById("leaderboardContainer").innerHTML = "<p style='color:#ff5a5f'>Failed to load leaderboard.</p>";
+      `;
+      tbody.appendChild(row);
+    }
+
+    statusEl.textContent = "";
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "Failed to load leaderboard: " + err.message;
   }
 }
+
 
 </script>
 </body>
