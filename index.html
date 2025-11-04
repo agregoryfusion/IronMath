@@ -36,31 +36,59 @@
       text-align: center;
       width: 100px;
     }
-    #game-container, #end-screen, #leaderboardContainer { display: none; }
-    table {
-      width: 80%;
-      margin: 20px auto;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 8px;
-      border-bottom: 1px solid #333;
-    }
-    th { color: #1e90ff; }
-    #timerBar {
-      width: 80%;
-      height: 20px;
-      background: #333;
-      border-radius: 10px;
-      margin: 20px auto;
-      overflow: hidden;
-    }
-    #timerFill {
-      height: 100%;
-      background: #1e90ff;
-      width: 100%;
-      transition: width 0.1s linear;
-    }
+#game-container, #end-screen, #leaderboardContainer {
+  display: none;
+}
+
+#question {
+  font-size: 48px;
+  font-weight: bold;
+  margin-top: 80px;
+  margin-bottom: 30px;
+}
+
+#timerBar {
+  width: 70%;
+  height: 30px;
+  background: #222;
+  border-radius: 15px;
+  margin: 40px auto;
+  overflow: hidden;
+  box-shadow: 0 0 10px #1e90ff55;
+}
+
+#timerFill {
+  height: 100%;
+  background: linear-gradient(90deg, #1e90ff, #00bfff);
+  width: 100%;
+  transition: width 0.25s linear;
+}
+
+#answer {
+  font-size: 32px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid #1e90ff;
+  width: 120px;
+  background: #111;
+  color: white;
+  text-align: center;
+  outline: none;
+  box-shadow: 0 0 10px #1e90ff33;
+  margin-bottom: 20px;
+}
+
+#answer:focus {
+  border-color: #00bfff;
+  box-shadow: 0 0 15px #00bfff55;
+}
+
+#stage-info {
+  margin-top: 10px;
+  font-size: 18px;
+  color: #bbb;
+}
+
   </style>
 </head>
 <body>
