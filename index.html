@@ -332,10 +332,14 @@ const firebaseConfig = {
       qStartTs = performance.now();
       timerFill.style.width = "100%";
       cancelAnimationFrame(rafId);
+let penaltySecondsThisRound = 0;
+qStartTs = performance.now();
+
 const tick = () => {
   const elapsed = (performance.now() - qStartTs) / 1000;
   const remaining = TIMER_SECONDS - elapsed - penaltySecondsThisRound;
   timeLeft = Math.max(0, remaining);
+
   const pct = Math.max(0, Math.min(1, timeLeft / TIMER_SECONDS));
   timerFill.style.width = (pct * 100) + "%";
 
@@ -347,6 +351,7 @@ const tick = () => {
     }
     return gameOver();
   }
+
   rafId = requestAnimationFrame(tick);
 };
 rafId = requestAnimationFrame(tick);
@@ -376,15 +381,25 @@ rafId = requestAnimationFrame(tick);
 
       // if current input no longer matches prefix, apply penalty
       if(!correctStr.startsWith(val)){
-        const avgModifiedSoFar = (totalTimeTrue + penaltySeconds) / Math.max(correctCount, 1) || 2.0;
-        const penalty = avgModifiedSoFar * Math.pow(PENALTY_MULT, mistakesThisQuestion); // 1x,2x,4x...
-        mistakesThisQuestion++;
-        penaltySeconds += penalty;             // visible in modified totals
-        penaltySecondsThisRound += penalty;
-        timeLeft -= penalty;                   // reduce remaining time
-        e.target.value = val.slice(0,-1);      // undo last wrong digit
-        shake(questionEl, mistakesThisQuestion);
-        if(timeLeft <= 0) return gameOver();
+const avgModifiedSoFar = (totalTimeTrue + penaltySeconds) / Math.max(correctCount, 1) || 2.0;
+const penalty = avgModifiedSoFar * Math.pow(PENALTY_MULT, mistakesThisQuestion);
+mistakesThisQuestion++;
+penaltySeconds += penalty;
+penaltySecondsThisRound += penalty;
+
+// visually “jump” the bar immediately
+const remaining = TIMER_SECONDS - ((performance.now() - qStartTs) / 1000) - penaltySecondsThisRound;
+timeLeft = Math.max(0, remaining);
+const pct = Math.max(0, Math.min(1, timeLeft / TIMER_SECONDS));
+timerFill.style.width = (pct * 100) + "%";
+
+// shake and trim the last wrong digit
+e.target.value = val.slice(0, -1);
+shake(questionEl, mistakesThisQuestion);
+
+// check for timeout after penalty
+if (remaining <= 0) return gameOver();
+
       }
     });
 
