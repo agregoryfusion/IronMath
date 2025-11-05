@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.4</p>
+<p id="version">v1.0.5</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -461,61 +461,91 @@ const firebaseConfig = {
       if(showing) loadLeaderboard();
     });
 
-    async function loadLeaderboard(){
-      try{
-        lbStatus.textContent = "Loading leaderboard...";
-        const qy = query(collection(db,"leaderboard"),
-          orderBy("questionsAnswered","desc"),
-          orderBy("totalTime","asc"),
-          limit(500)
-        );
-        const snap = await getDocs(qy);
-        const grouped = {};
-        snap.forEach(docSnap=>{
-          const d = docSnap.data();
-          if(!d.playerName) return;
-          const key = (d.playerName||"").trim().toLowerCase();
-          if(!grouped[key]) grouped[key] = [];
-          grouped[key].push(d);
-        });
-        // pick best per player
-        const best = Object.values(grouped).map(list=>{
-          return list.sort((a,b)=>{
-            if(b.questionsAnswered === a.questionsAnswered) return a.totalTime - b.totalTime;
-            return b.questionsAnswered - a.questionsAnswered;
-          })[0];
-        });
-        // global sort
-        best.sort((a,b)=>{
-          if(b.questionsAnswered === a.questionsAnswered) return a.totalTime - b.totalTime;
-          return b.questionsAnswered - a.questionsAnswered;
-        });
+// Caching variables
+let cachedLeaderboardData = null;
+let lastLeaderboardFetchTime = 0;
+const LEADERBOARD_CACHE_DURATION = 60000; // 60 seconds
 
-        // render
-        lbBody.innerHTML = "";
-        let rank=1;
-        for(const d of best.slice(0,100)){
-          const date = d.dateAdded ? new Date(d.dateAdded) : null;
-          const mm = date ? String(date.getMonth()+1).padStart(2,"0") : "--";
-          const dd = date ? String(date.getDate()).padStart(2,"0") : "--";
-          const yyyy = date ? date.getFullYear() : "----";
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${rank++}</td>
-            <td>${escapeHtml(d.playerName||"???")}</td>
-            <td>${d.stageReached ?? "?"}</td>
-            <td>${d.questionsAnswered ?? "?"}</td>
-            <td>${(d.totalTime ?? 0).toFixed(2)}</td>
-            <td>${mm}/${dd}/${yyyy}</td>
-          `;
-          lbBody.appendChild(tr);
-        }
-        lbStatus.textContent = "";
-      }catch(e){
-        console.error(e);
-        lbStatus.textContent = "Failed to load leaderboard: " + (e?.message || e);
-      }
+async function loadLeaderboard(forceRefresh = false) {
+  try {
+    // Check cache validity
+    const now = Date.now();
+    if (!forceRefresh && cachedLeaderboardData && (now - lastLeaderboardFetchTime < LEADERBOARD_CACHE_DURATION)) {
+      console.log("Using cached leaderboard data");
+      renderLeaderboard(cachedLeaderboardData);
+      return;
     }
+
+    lbStatus.textContent = "Loading leaderboard...";
+
+    // --- Firestore query (only runs if cache expired or forced) ---
+    const qy = query(
+      collection(db, "leaderboard"),
+      orderBy("questionsAnswered", "desc"),
+      orderBy("totalTime", "asc"),
+      limit(500)
+    );
+    const snap = await getDocs(qy);
+
+    // Group and deduplicate by player name
+    const grouped = {};
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      if (!d.playerName) return;
+      const key = (d.playerName || "").trim().toLowerCase();
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(d);
+    });
+
+    // Select best per player
+    const best = Object.values(grouped).map(list => {
+      return list.sort((a, b) => {
+        if (b.questionsAnswered === a.questionsAnswered) return a.totalTime - b.totalTime;
+        return b.questionsAnswered - a.questionsAnswered;
+      })[0];
+    });
+
+    // Global sort
+    best.sort((a, b) => {
+      if (b.questionsAnswered === a.questionsAnswered) return a.totalTime - b.totalTime;
+      return b.questionsAnswered - a.questionsAnswered;
+    });
+
+    // Save to cache
+    cachedLeaderboardData = best;
+    lastLeaderboardFetchTime = now;
+
+    // Render
+    renderLeaderboard(best);
+    lbStatus.textContent = "";
+
+  } catch (e) {
+    console.error(e);
+    lbStatus.textContent = "Failed to load leaderboard: " + (e?.message || e);
+  }
+}
+
+function renderLeaderboard(data) {
+  lbBody.innerHTML = "";
+  let rank = 1;
+  for (const d of data.slice(0, 100)) {
+    const date = d.dateAdded ? new Date(d.dateAdded) : null;
+    const mm = date ? String(date.getMonth() + 1).padStart(2, "0") : "--";
+    const dd = date ? String(date.getDate()).padStart(2, "0") : "--";
+    const yyyy = date ? date.getFullYear() : "----";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${rank++}</td>
+      <td>${escapeHtml(d.playerName || "???")}</td>
+      <td>${d.stageReached ?? "?"}</td>
+      <td>${d.questionsAnswered ?? "?"}</td>
+      <td>${(d.totalTime ?? 0).toFixed(2)}</td>
+      <td>${mm}/${dd}/${yyyy}</td>
+    `;
+    lbBody.appendChild(tr);
+  }
+}
 
     function escapeHtml(s){
       return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
