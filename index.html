@@ -308,6 +308,7 @@ const firebaseConfig = {
     }
 
     function nextQuestion(){
+      let penaltySecondsThisRound = 0;
       // decay and pick a new pair not in recent
       const pairs = buildPairs(stage);
       let q; let guard=0;
@@ -331,23 +332,24 @@ const firebaseConfig = {
       qStartTs = performance.now();
       timerFill.style.width = "100%";
       cancelAnimationFrame(rafId);
-      const tick = ()=>{
-        const dt = (performance.now() - qStartTs)/1000;
-        // timeLeft reduced elsewhere by penalties; we simply animate bar to reflect current timeLeft
-        const pct = Math.max(0, Math.min(1, timeLeft/TIMER_SECONDS));
-        timerFill.style.width = (pct*100) + "%";
-        if(timeLeft <= 0){
-          // timeout
-          if(!loggedThisQuestion){
-            const trueT = (performance.now()-qStartTs)/1000;
-            totalTimeTrue += trueT;
-            loggedThisQuestion = true;
-          }
-          return gameOver();
-        }
-        rafId = requestAnimationFrame(tick);
-      };
-      rafId = requestAnimationFrame(tick);
+const tick = () => {
+  const elapsed = (performance.now() - qStartTs) / 1000;
+  const remaining = TIMER_SECONDS - elapsed - penaltySecondsThisRound;
+  timeLeft = Math.max(0, remaining);
+  const pct = Math.max(0, Math.min(1, timeLeft / TIMER_SECONDS));
+  timerFill.style.width = (pct * 100) + "%";
+
+  if (timeLeft <= 0) {
+    if (!loggedThisQuestion) {
+      const trueT = (performance.now() - qStartTs) / 1000;
+      totalTimeTrue += trueT;
+      loggedThisQuestion = true;
+    }
+    return gameOver();
+  }
+  rafId = requestAnimationFrame(tick);
+};
+rafId = requestAnimationFrame(tick);
     }
 
     // input handling (typing)
@@ -378,6 +380,7 @@ const firebaseConfig = {
         const penalty = avgModifiedSoFar * Math.pow(PENALTY_MULT, mistakesThisQuestion); // 1x,2x,4x...
         mistakesThisQuestion++;
         penaltySeconds += penalty;             // visible in modified totals
+        penaltySecondsThisRound += penalty;
         timeLeft -= penalty;                   // reduce remaining time
         e.target.value = val.slice(0,-1);      // undo last wrong digit
         shake(questionEl, mistakesThisQuestion);
@@ -405,7 +408,8 @@ const firebaseConfig = {
       document.getElementById("end-avg").innerHTML =
         `Avg time/question: ${avgTrue.toFixed(2)} s (<span id="end-avg-with-penalty">${avgPen.toFixed(2)}</span> s with penalties)`;
       document.getElementById("session-id").textContent = `Session ID: ${sessionId}`;
-
+      lbWrap.style.display = "none";
+      lbWrap.classList.remove("show");
       uploadSession(totalTrue, totalWithPen);
     }
 
