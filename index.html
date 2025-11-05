@@ -446,7 +446,7 @@ const firebaseConfig = {
         await setDoc(doc(collection(db,"sessions"), sessionId), payload, {merge:false});
         // also add to leaderboard (one row per run)
         await addDoc(collection(db,"leaderboard"), payload);
-        document.getElementById("saved-status").textContent = "Saved to Firebase ✓";
+        document.getElementById("saved-status").textContent = "Saved to Leaderboard ✓";
       }catch(e){
         console.error(e);
         const s = document.getElementById("saved-status");
