@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>IronMath v1.0.2</title>
+<title>IronMath v1.0.3</title>
 <style>
   :root{
     --bg:#0e0f12; --text:#ffffff; --muted:#a8b0bb; --accent:#1e90ff; --accent2:#00bfff; --panel:#161a20; --input:#15181d;
@@ -411,7 +411,7 @@ const firebaseConfig = {
       const avgTrue = totalTrue / Math.max(correctCount,1);
       const avgPen = totalWithPen / Math.max(correctCount,1);
 
-      document.getElementById("end-stage").textContent = `Stage reached: ${stage}`;
+     /* document.getElementById("end-stage").textContent = `Stage reached: ${stage}`;*/
       document.getElementById("end-questions").textContent = `Questions answered: ${correctCount}`;
       document.getElementById("end-penalty").textContent = `Total penalty time: ${penaltySeconds.toFixed(2)} s`;
       document.getElementById("end-total").innerHTML =
