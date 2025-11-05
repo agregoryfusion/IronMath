@@ -11,11 +11,13 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;text-align:center}
   h1{margin:18px 0 6px;color:var(--accent)}
+
   /* LOGIN */
   #login-screen{min-height:40vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
   #loginBtn{background:#0078d4;border:none;color:#fff;border-radius:8px;padding:12px 20px;font-size:16px;cursor:pointer}
   #loginBtn:hover{background:#005ea6}
   #loginStatus{color:#ff8a8a;font-size:13px}
+
   /* GAME */
   #game-container{display:none;max-width:900px;margin:0 auto;padding:10px 16px}
   #question{font-size:48px;font-weight:700;margin-top:80px;margin-bottom:30px;min-height:1.2em;transition:transform .05s}
@@ -24,15 +26,16 @@
   #answer{font-size:32px;padding:10px;border-radius:10px;border:2px solid var(--accent);width:140px;background:var(--input);color:#fff;text-align:center;outline:none;box-shadow:0 0 10px #1e90ff33;margin-bottom:16px}
   #answer:focus{border-color:var(--accent2);box-shadow:0 0 15px #00bfff55}
   #stage-info{margin-top:6px;font-size:18px;color:#c9d2db}
+
   /* END SCREEN */
   #end-screen{display:none;text-align:center;margin-top:60px;color:#fff}
-  #end-screen .mode-label{background:#222;border:1px solid var(--accent);color:var(--accent);display:inline-block;padding:4px 12px;border-radius:20px;font-size:14px;margin-bottom:8px}
   #end-screen h3{color:#ff4d4d;font-size:28px;margin:4px 0 10px}
   #end-screen p{margin:6px 0;font-size:18px}
   #end-screen button{background:var(--accent);border:none;color:#fff;padding:10px 20px;font-size:16px;border-radius:8px;margin:10px;cursor:pointer;transition:filter .2s}
   #end-screen button:hover{filter:brightness(1.05)}
   #session-id{color:#99a6b4;font-size:14px}
   #saved-status{color:#7fdca2;font-size:14px}
+
   /* LEADERBOARD */
   #leaderboardContainer{display:none;margin:40px auto 20px;max-width:800px;text-align:center;opacity:0;transition:opacity .3s}
   #leaderboardContainer.show{opacity:1}
@@ -64,7 +67,6 @@
 
   <!-- End Screen -->
   <div id="end-screen">
-    <div class="mode-label">Typing Mode</div>
     <h3>Game Over</h3>
 
     <p id="end-stage">Stage reached: —</p>
@@ -115,7 +117,6 @@ const firebaseConfig = {
   appId: "1:729878130193:web:f4d447b552e4f955f80bb0",
   measurementId: "G-0VCM7C1HPC"
 };
-
     /* ===================== Init ===================== */
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -148,7 +149,6 @@ const firebaseConfig = {
       return cap(local);
     }
     const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
-
     let playerName = "Player";
 
     onAuthStateChanged(auth, (user)=>{
@@ -157,7 +157,7 @@ const firebaseConfig = {
         loginScreen.style.display = "none";
         endScreen.style.display = "none";
         gameContainer.style.display = "block";
-        startGame(); // auto start when already signed in on refresh
+        startGame(); // auto start on refresh
       }else{
         gameContainer.style.display = "none";
         endScreen.style.display = "none";
@@ -180,14 +180,14 @@ const firebaseConfig = {
     });
 
     /* ===================== Game Settings ===================== */
-    const SIGMA_SCALE = 6;       // width of normal distribution across product range
+    const SIGMA_SCALE = 6;       // normal distribution width across product range
     const STRETCH_MULT = 0.5;    // one factor may stretch up to stage*(1+STRETCH_MULT)
-    const WEIGHT_DECAY = 0.88;   // how fast repeat product weights decay each question
+    const WEIGHT_DECAY = 0.88;   // repeat product decay factor
     const WEIGHT_STRENGTH = 4;   // how strongly repeats are penalized
     const START_STAGE = 8;
     const TIMER_SECONDS = 10;
     const DUPLICATE_PROTECTION = 25;
-    const PENALTY_MULT = 2;      // per-digit penalty multiplier (1x, 2x, 4x...) per question
+    const PENALTY_MULT = 2;      // per-digit penalty multiplier (1x,2x,4x...) per question
 
     /* ===================== Game State ===================== */
     let sessionId = shortID(6);
@@ -251,7 +251,7 @@ const firebaseConfig = {
           if(score<bestScore){ bestScore=score; bestIdx=i; }
         }
         if(bestIdx!==-1) break;
-        // If all excluded by recent list, relax by popping oldest
+        // If everything excluded by recent list, relax by popping oldest
         recentAnswers.shift();
       }
       const [a,b]=pairs[bestIdx];
@@ -308,7 +308,6 @@ const firebaseConfig = {
     }
 
     function nextQuestion(){
-      let penaltySecondsThisRound = 0;
       // decay and pick a new pair not in recent
       const pairs = buildPairs(stage);
       let q; let guard=0;
@@ -328,80 +327,74 @@ const firebaseConfig = {
       stageInfo.textContent = `Stage ${stage}`;
 
       // timer start
+      let penaltySecondsThisRound = 0;
       timeLeft = TIMER_SECONDS;
       qStartTs = performance.now();
       timerFill.style.width = "100%";
       cancelAnimationFrame(rafId);
-let penaltySecondsThisRound = 0;
-qStartTs = performance.now();
 
-const tick = () => {
-  const elapsed = (performance.now() - qStartTs) / 1000;
-  const remaining = TIMER_SECONDS - elapsed - penaltySecondsThisRound;
-  timeLeft = Math.max(0, remaining);
+      const tick = () => {
+        const elapsed = (performance.now() - qStartTs) / 1000;
+        const remaining = TIMER_SECONDS - elapsed - penaltySecondsThisRound;
+        timeLeft = Math.max(0, remaining);
 
-  const pct = Math.max(0, Math.min(1, timeLeft / TIMER_SECONDS));
-  timerFill.style.width = (pct * 100) + "%";
+        const pct = Math.max(0, Math.min(1, timeLeft / TIMER_SECONDS));
+        timerFill.style.width = (pct * 100) + "%";
 
-  if (timeLeft <= 0) {
-    if (!loggedThisQuestion) {
-      const trueT = (performance.now() - qStartTs) / 1000;
-      totalTimeTrue += trueT;
-      loggedThisQuestion = true;
+        if (timeLeft <= 0) {
+          if (!loggedThisQuestion) {
+            const trueT = (performance.now() - qStartTs) / 1000;
+            totalTimeTrue += trueT;
+            loggedThisQuestion = true;
+          }
+          return gameOver();
+        }
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+
+      // attach a local handler that can see penaltySecondsThisRound
+      answerEl.oninput = (e)=>{
+        if(!current) return;
+        const val = e.target.value.trim();
+        if(val === "") return;
+        const correctStr = String(current.prod);
+
+        if(val === correctStr){
+          // correct
+          const trueT = (performance.now()-qStartTs)/1000;
+          totalTimeTrue += trueT;
+          correctCount++;
+          questionCount++;
+          decayWeightsAndBump(current.prod);
+          // Stage growth (quadratic-like)
+          const stepSize = 2*stage - 1;
+          if(questionCount >= stepSize*(stage-START_STAGE+1)) stage++;
+          current = null;
+          return nextQuestion();
+        }
+
+        // wrong digit (not a prefix)
+        if(!correctStr.startsWith(val)){
+          const avgModifiedSoFar = (totalTimeTrue + penaltySeconds) / Math.max(correctCount, 1) || 2.0;
+          const penalty = avgModifiedSoFar * Math.pow(PENALTY_MULT, mistakesThisQuestion); // 1x,2x,4x...
+          mistakesThisQuestion++;
+          penaltySeconds += penalty;            // counted in modified totals
+          penaltySecondsThisRound += penalty;   // affects visible time-left this question
+
+          // visually jump bar and undo last digit
+          const remaining = TIMER_SECONDS - ((performance.now() - qStartTs) / 1000) - penaltySecondsThisRound;
+          timeLeft = Math.max(0, remaining);
+          const pct = Math.max(0, Math.min(1, timeLeft / TIMER_SECONDS));
+          timerFill.style.width = (pct * 100) + "%";
+
+          e.target.value = val.slice(0, -1);
+          shake(questionEl, mistakesThisQuestion);
+
+          if (remaining <= 0) return gameOver();
+        }
+      };
     }
-    return gameOver();
-  }
-
-  rafId = requestAnimationFrame(tick);
-};
-rafId = requestAnimationFrame(tick);
-    }
-
-    // input handling (typing)
-    answerEl.addEventListener("input",(e)=>{
-      if(!current) return;
-      const val = e.target.value.trim();
-      if(val === "") return;
-      const correctStr = String(current.prod);
-
-      if(val === correctStr){
-        // mark success
-        const trueT = (performance.now()-qStartTs)/1000;
-        totalTimeTrue += trueT;
-        correctCount++;
-        questionCount++;
-        decayWeightsAndBump(current.prod);
-        // Stage growth (quadratic step feel)
-        const stepSize = 2*stage - 1;
-        if(questionCount >= stepSize*(stage-START_STAGE+1)) stage++;
-
-        current = null;
-        return nextQuestion();
-      }
-
-      // if current input no longer matches prefix, apply penalty
-      if(!correctStr.startsWith(val)){
-const avgModifiedSoFar = (totalTimeTrue + penaltySeconds) / Math.max(correctCount, 1) || 2.0;
-const penalty = avgModifiedSoFar * Math.pow(PENALTY_MULT, mistakesThisQuestion);
-mistakesThisQuestion++;
-penaltySeconds += penalty;
-penaltySecondsThisRound += penalty;
-
-// visually “jump” the bar immediately
-const remaining = TIMER_SECONDS - ((performance.now() - qStartTs) / 1000) - penaltySecondsThisRound;
-timeLeft = Math.max(0, remaining);
-const pct = Math.max(0, Math.min(1, timeLeft / TIMER_SECONDS));
-timerFill.style.width = (pct * 100) + "%";
-
-// shake and trim the last wrong digit
-e.target.value = val.slice(0, -1);
-shake(questionEl, mistakesThisQuestion);
-
-// check for timeout after penalty
-if (remaining <= 0) return gameOver();
-
-      }
-    });
 
     function gameOver(){
       cancelAnimationFrame(rafId);
@@ -409,12 +402,15 @@ if (remaining <= 0) return gameOver();
       gameContainer.style.display = "none";
       endScreen.style.display = "block";
 
+      // close leaderboard by default at end
+      lbWrap.style.display = "none";
+      lbWrap.classList.remove("show");
+
       const totalTrue = totalTimeTrue;
       const totalWithPen = totalTimeTrue + penaltySeconds;
       const avgTrue = totalTrue / Math.max(correctCount,1);
       const avgPen = totalWithPen / Math.max(correctCount,1);
 
-      // Fill end screen fields
       document.getElementById("end-stage").textContent = `Stage reached: ${stage}`;
       document.getElementById("end-questions").textContent = `Questions answered: ${correctCount}`;
       document.getElementById("end-penalty").textContent = `Total penalty time: ${penaltySeconds.toFixed(2)} s`;
@@ -422,9 +418,9 @@ if (remaining <= 0) return gameOver();
         `Total time: ${totalTrue.toFixed(2)} s (<span id="end-with-penalty">${totalWithPen.toFixed(2)}</span> s with penalties)`;
       document.getElementById("end-avg").innerHTML =
         `Avg time/question: ${avgTrue.toFixed(2)} s (<span id="end-avg-with-penalty">${avgPen.toFixed(2)}</span> s with penalties)`;
-      lbWrap.style.display = "none";
-      lbWrap.classList.remove("show");
-      uploadSession(totalTrue, totalWithPen);
+      document.getElementById("session-id").textContent = `Session ID: ${sessionId}`;
+
+      uploadSession(totalTrue);
     }
 
     // Restart (keep auth)
@@ -435,28 +431,27 @@ if (remaining <= 0) return gameOver();
     });
 
     /* ===================== Uploads + Leaderboard ===================== */
-    async function uploadSession(totalTrue, totalWithPen){
+    async function uploadSession(totalTrue){
       try{
         const payload = {
           sessionID: sessionId,
           playerName,
-          startTime: Date.now(),       // (optionally store real start if you track it)
-          endTime: Date.now(),
           stageReached: stage,
           totalTime: totalTrue,
           penaltyTime: penaltySeconds,
           questionsAnswered: correctCount,
           dateAdded: Date.now()
         };
-        // sessions doc by sessionID
+        // sessions doc by sessionID (overwrite ok)
         await setDoc(doc(collection(db,"sessions"), sessionId), payload, {merge:false});
-        // also add to leaderboard (best-per-run)
+        // also add to leaderboard (one row per run)
         await addDoc(collection(db,"leaderboard"), payload);
-        document.getElementById("saved-status").textContent = "Saved to Leaderboard";
+        document.getElementById("saved-status").textContent = "Saved to Firebase ✓";
       }catch(e){
         console.error(e);
-        document.getElementById("saved-status").textContent = "Upload failed";
-        document.getElementById("saved-status").style.color = "#ff8a8a";
+        const s = document.getElementById("saved-status");
+        s.textContent = "Upload failed";
+        s.style.color = "#ff8a8a";
       }
     }
 
@@ -472,7 +467,7 @@ if (remaining <= 0) return gameOver();
         const qy = query(collection(db,"leaderboard"),
           orderBy("questionsAnswered","desc"),
           orderBy("totalTime","asc"),
-          limit(500) // read a bunch, dedupe client-side
+          limit(500)
         );
         const snap = await getDocs(qy);
         const grouped = {};
