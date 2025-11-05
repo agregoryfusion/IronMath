@@ -407,7 +407,6 @@ rafId = requestAnimationFrame(tick);
         `Total time: ${totalTrue.toFixed(2)} s (<span id="end-with-penalty">${totalWithPen.toFixed(2)}</span> s with penalties)`;
       document.getElementById("end-avg").innerHTML =
         `Avg time/question: ${avgTrue.toFixed(2)} s (<span id="end-avg-with-penalty">${avgPen.toFixed(2)}</span> s with penalties)`;
-      document.getElementById("session-id").textContent = `Session ID: ${sessionId}`;
       lbWrap.style.display = "none";
       lbWrap.classList.remove("show");
       uploadSession(totalTrue, totalWithPen);
@@ -438,7 +437,7 @@ rafId = requestAnimationFrame(tick);
         await setDoc(doc(collection(db,"sessions"), sessionId), payload, {merge:false});
         // also add to leaderboard (best-per-run)
         await addDoc(collection(db,"leaderboard"), payload);
-        document.getElementById("saved-status").textContent = "Saved to Firebase ✓";
+        document.getElementById("saved-status").textContent = "Saved to Leaderboard";
       }catch(e){
         console.error(e);
         document.getElementById("saved-status").textContent = "Upload failed";
