@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>IronMath v1.0.0</title>
+<title>IronMath v1.0.2</title>
 <style>
   :root{
     --bg:#0e0f12; --text:#ffffff; --muted:#a8b0bb; --accent:#1e90ff; --accent2:#00bfff; --panel:#161a20; --input:#15181d;
@@ -418,7 +418,7 @@ const firebaseConfig = {
         `Total time: ${totalTrue.toFixed(2)} s (<span id="end-with-penalty">${totalWithPen.toFixed(2)}</span> s with penalties)`;
       document.getElementById("end-avg").innerHTML =
         `Avg time/question: ${avgTrue.toFixed(2)} s (<span id="end-avg-with-penalty">${avgPen.toFixed(2)}</span> s with penalties)`;
-      document.getElementById("session-id").textContent = `Session ID: ${sessionId}`;
+     /* document.getElementById("session-id").textContent = `Session ID: ${sessionId}`; */
 
       uploadSession(totalTrue);
     }
