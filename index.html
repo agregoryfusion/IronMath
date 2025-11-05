@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>IronMath v1.0.3</title>
+<title>IronMath</title>
 <style>
   :root{
     --bg:#0e0f12; --text:#ffffff; --muted:#a8b0bb; --accent:#1e90ff; --accent2:#00bfff; --panel:#161a20; --input:#15181d;
@@ -11,6 +11,7 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;text-align:center}
   h1{margin:18px 0 6px;color:var(--accent)}
+  #version {  color: var(--accent);  font-size: 0.5em:  margin-top: -6px;}
 
   /* LOGIN */
   #login-screen{min-height:40vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
@@ -49,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-
+<p id="version">v1.0.3</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
