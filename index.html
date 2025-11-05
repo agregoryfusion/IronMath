@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.7</p>
+<p id="version">v1.0.5</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -303,11 +303,6 @@ const firebaseConfig = {
 
     function startGame(){
       resetRunState();
-      let runData = {
-  sessionID: generateShortID(),   // you already have a short ID generator
-  startTime: Date.now(),
-  results: [],                    // <-- store question-by-question data here
-};
       runStartTs = performance.now();
       nextQuestion();
     }
@@ -371,15 +366,6 @@ const firebaseConfig = {
           totalTimeTrue += trueT;
           correctCount++;
           questionCount++;
-          const timeTaken = (Date.now() - questionStartTime) / 1000; // seconds per question
-runData.results.push({
-  a: currentA,
-  b: currentB,
-  stage: stage,
-  timeTaken: timeTaken,
-  mistakes: mistakesThisQuestion,   // increment this if user mistypes before correct
-  success: (answer === correctAnswer)
-});
           decayWeightsAndBump(current.prod);
           // Stage growth (quadratic-like)
           const stepSize = 2*stage - 1;
@@ -445,39 +431,29 @@ runData.results.push({
     });
 
     /* ===================== Uploads + Leaderboard ===================== */
-async function uploadSession() {
-  try {
-    const sessionRef = await addDoc(collection(db, "sessions"), {
-      playerName,
-      sessionId,
-      stageReached: stage,
-      questionsAnswered: correctAnswers,
-      totalTime,
-      penaltyTime,
-      avgTime,
-      dateAdded: Date.now()
-    });
-
-    // also upload individual question results
-    for (const q of runData.results) {
-      await addDoc(collection(sessionRef, "answers"), {
-        playerName,
-        a: q.a,
-        b: q.b,
-        stage: q.stage,
-        timeTaken: q.timeTaken,
-        mistakes: q.mistakes,
-        success: q.success,
-        dateAdded: Date.now()
-      });
+    async function uploadSession(totalTrue){
+      try{
+        const payload = {
+          sessionID: sessionId,
+          playerName,
+          stageReached: stage,
+          totalTime: totalTrue,
+          penaltyTime: penaltySeconds,
+          questionsAnswered: correctCount,
+          dateAdded: Date.now()
+        };
+        // sessions doc by sessionID (overwrite ok)
+        await setDoc(doc(collection(db,"sessions"), sessionId), payload, {merge:false});
+        // also add to leaderboard (one row per run)
+        await addDoc(collection(db,"leaderboard"), payload);
+        document.getElementById("saved-status").textContent = "Saved to Leaderboard ✓";
+      }catch(e){
+        console.error(e);
+        const s = document.getElementById("saved-status");
+        s.textContent = "Upload failed";
+        s.style.color = "#ff8a8a";
+      }
     }
-
-    console.log("Session and answers uploaded!");
-  } catch (err) {
-    console.error("Upload failed", err);
-  }
-}
-
 
     viewBtn.addEventListener("click", ()=>{
       const showing = lbWrap.classList.toggle("show");
