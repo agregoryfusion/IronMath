@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.8</p>
+<p id="version">v1.0.9</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -289,25 +289,26 @@ const firebaseConfig = {
 let runData = { sessionID: "", results: [] };
     
 function buildSessionID(playerName) {
-  // Split and capitalize first + last name
   const parts = (playerName || "Player").trim().split(/\s+/);
   const first = parts[0] || "Player";
   const last = parts[1] || "";
 
-  // Get MST time (UTC−7, no DST)
+  // Get MST (UTC−7)
   const now = new Date();
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  const mst = new Date(utcMs - 7 * 60 * 60000); // shift to UTC−7
+  const mst = new Date(utcMs - 7 * 60 * 60000);
 
-  // Format date and time
+  // Format safe date string (no slashes)
   const mm = String(mst.getMonth() + 1).padStart(2, "0");
   const dd = String(mst.getDate()).padStart(2, "0");
   const yyyy = mst.getFullYear();
   const hh = String(mst.getHours()).padStart(2, "0");
   const min = String(mst.getMinutes()).padStart(2, "0");
 
-  return `${first} ${last} ${mm}/${dd}/${yyyy} ${hh}:${min}`;
+  // Use dashes instead of slashes
+  return `${first} ${last} ${mm}-${dd}-${yyyy} ${hh}:${min}`;
 }
+
 
 function resetRunState() {
   sessionId = buildSessionID(playerName);
