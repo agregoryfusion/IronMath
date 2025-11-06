@@ -79,7 +79,11 @@
     <p id="saved-status"></p>
 
     <button id="restartBtn">Restart</button>
-    <button id="viewLeaderboardBtn">View Leaderboard</button>
+<div id="leaderboardButtons">
+  <button id="viewAllBtn">View All</button>
+  <button id="viewStudentsBtn">View Students</button>
+  <button id="viewTeachersBtn">View Teachers</button>
+</div>
 
     <div id="leaderboardContainer">
       <p id="leaderboardStatus"></p>
@@ -135,7 +139,9 @@ const firebaseConfig = {
     const stageInfo = document.getElementById("stage-info");
     const timerFill = document.getElementById("timerFill");
     const restartBtn = document.getElementById("restartBtn");
-    const viewBtn = document.getElementById("viewLeaderboardBtn");
+const viewAllBtn = document.getElementById("viewAllBtn");
+const viewStudentsBtn = document.getElementById("viewStudentsBtn");
+const viewTeachersBtn = document.getElementById("viewTeachersBtn");
     const lbWrap = document.getElementById("leaderboardContainer");
     const lbStatus = document.getElementById("leaderboardStatus");
     const lbBody = document.querySelector("#leaderboardContainer tbody");
@@ -513,30 +519,33 @@ async function uploadSession(totalTrue) {
 }
 
 
-    viewBtn.addEventListener("click", ()=>{
-      const showing = lbWrap.classList.toggle("show");
-      lbWrap.style.display = showing ? "block" : "none";
-      if(showing) loadLeaderboard();
-    });
+function showLeaderboard(filteredData = null) {
+  const showing = lbWrap.classList.toggle("show");
+  lbWrap.style.display = showing ? "block" : "none";
+  if (showing) {
+    loadLeaderboard(filteredData);
+  }
+}
+
+viewAllBtn.addEventListener("click", () => showLeaderboard("all"));
+viewStudentsBtn.addEventListener("click", () => showLeaderboard("students"));
+viewTeachersBtn.addEventListener("click", () => showLeaderboard("teachers"));
 
 // Caching variables
 let cachedLeaderboardData = null;
 let lastLeaderboardFetchTime = 0;
 const LEADERBOARD_CACHE_DURATION = 60000; // 60 seconds
 
-async function loadLeaderboard(forceRefresh = false) {
+async function loadLeaderboard(filterType = "all", forceRefresh = false) {
   try {
-    // Check cache validity
     const now = Date.now();
     if (!forceRefresh && cachedLeaderboardData && (now - lastLeaderboardFetchTime < LEADERBOARD_CACHE_DURATION)) {
       console.log("Using cached leaderboard data");
-      renderLeaderboard(cachedLeaderboardData);
+      renderLeaderboard(applyLeaderboardFilter(cachedLeaderboardData, filterType));
       return;
     }
 
     lbStatus.textContent = "Loading leaderboard...";
-
-    // --- Firestore query (only runs if cache expired or forced) ---
     const qy = query(
       collection(db, "leaderboard"),
       orderBy("questionsAnswered", "desc"),
@@ -545,7 +554,6 @@ async function loadLeaderboard(forceRefresh = false) {
     );
     const snap = await getDocs(qy);
 
-    // Group and deduplicate by player name
     const grouped = {};
     snap.forEach(docSnap => {
       const d = docSnap.data();
@@ -555,32 +563,37 @@ async function loadLeaderboard(forceRefresh = false) {
       grouped[key].push(d);
     });
 
-    // Select best per player
-    const best = Object.values(grouped).map(list => {
-      return list.sort((a, b) => {
-        if (b.questionsAnswered === a.questionsAnswered) return a.totalTime - b.totalTime;
+    const best = Object.values(grouped).map(list =>
+      list.sort((a, b) => {
+        if (b.questionsAnswered === a.questionsAnswered)
+          return a.totalTime - b.totalTime;
         return b.questionsAnswered - a.questionsAnswered;
-      })[0];
-    });
+      })[0]
+    );
 
-    // Global sort
     best.sort((a, b) => {
-      if (b.questionsAnswered === a.questionsAnswered) return a.totalTime - b.totalTime;
+      if (b.questionsAnswered === a.questionsAnswered)
+        return a.totalTime - b.totalTime;
       return b.questionsAnswered - a.questionsAnswered;
     });
 
-    // Save to cache
     cachedLeaderboardData = best;
     lastLeaderboardFetchTime = now;
 
-    // Render
-    renderLeaderboard(best);
+    renderLeaderboard(applyLeaderboardFilter(best, filterType));
     lbStatus.textContent = "";
-
   } catch (e) {
     console.error(e);
     lbStatus.textContent = "Failed to load leaderboard: " + (e?.message || e);
   }
+}
+function applyLeaderboardFilter(data, filterType) {
+  if (filterType === "students") {
+    return data.filter(d => d.isStudent === true);
+  } else if (filterType === "teachers") {
+    return data.filter(d => d.isTeacher === true);
+  }
+  return data;
 }
 
 function renderLeaderboard(data) {
