@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.7</p>
+<p id="version">v1.0.8</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -190,7 +190,7 @@ const firebaseConfig = {
     const PENALTY_MULT = 2;      // per-digit penalty multiplier (1x,2x,4x...) per question
 
     /* ===================== Game State ===================== */
-    let sessionId = shortID(6);
+    let sessionId = buildSessionID(playerName);
     let stage = START_STAGE;
     let questionCount = 0;   // total asked (for stage growth)
     let correctCount = 0;
@@ -287,9 +287,30 @@ const firebaseConfig = {
 
     /* ===================== Game Flow ===================== */
 let runData = { sessionID: "", results: [] };
+    
+function buildSessionID(playerName) {
+  // Split and capitalize first + last name
+  const parts = (playerName || "Player").trim().split(/\s+/);
+  const first = parts[0] || "Player";
+  const last = parts[1] || "";
+
+  // Get MST time (UTC−7, no DST)
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const mst = new Date(utcMs - 7 * 60 * 60000); // shift to UTC−7
+
+  // Format date and time
+  const mm = String(mst.getMonth() + 1).padStart(2, "0");
+  const dd = String(mst.getDate()).padStart(2, "0");
+  const yyyy = mst.getFullYear();
+  const hh = String(mst.getHours()).padStart(2, "0");
+  const min = String(mst.getMinutes()).padStart(2, "0");
+
+  return `${first} ${last} ${mm}/${dd}/${yyyy} ${hh}:${min}`;
+}
 
 function resetRunState() {
-  sessionId = shortID(6);
+  sessionId = buildSessionID(playerName);
   runData = { sessionID: sessionId, results: [] }; // add this line
   stage = START_STAGE;
   questionCount = 0;
