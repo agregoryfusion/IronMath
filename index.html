@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.18</p>
+<p id="version">v1.0.19</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -80,9 +80,9 @@
 
     <button id="restartBtn">Restart</button>
 <div id="leaderboardButtons">
-  <button id="viewAllBtn">View All</button>
-  <button id="viewStudentsBtn">View Students</button>
-  <button id="viewTeachersBtn">View Teachers</button>
+  <button id="viewAllBtn">All</button>
+  <button id="viewStudentsBtn">Students</button>
+  <button id="viewTeachersBtn">Teachers</button>
 </div>
 
     <div id="leaderboardContainer">
@@ -139,9 +139,9 @@ const firebaseConfig = {
     const stageInfo = document.getElementById("stage-info");
     const timerFill = document.getElementById("timerFill");
     const restartBtn = document.getElementById("restartBtn");
-const viewAllBtn = document.getElementById("viewAllBtn");
-const viewStudentsBtn = document.getElementById("viewStudentsBtn");
-const viewTeachersBtn = document.getElementById("viewTeachersBtn");
+    const viewAllBtn = document.getElementById("viewAllBtn");
+    const viewStudentsBtn = document.getElementById("viewStudentsBtn");
+    const viewTeachersBtn = document.getElementById("viewTeachersBtn");
     const lbWrap = document.getElementById("leaderboardContainer");
     const lbStatus = document.getElementById("leaderboardStatus");
     const lbBody = document.querySelector("#leaderboardContainer tbody");
@@ -451,9 +451,12 @@ function resetRunState() {
       gameContainer.style.display = "none";
       endScreen.style.display = "block";
 
-      // close leaderboard by default at end
-      lbWrap.style.display = "none";
-      lbWrap.classList.remove("show");
+
+      // ✅ Show leaderboard immediately
+      lbWrap.style.display = "block";
+      lbWrap.classList.add("show");
+      lbStatus.textContent = "Loading leaderboard...";
+      loadLeaderboard("all", true); // default to 'all' filter
 
       const totalTrue = totalTimeTrue;
       const totalWithPen = totalTimeTrue + penaltySeconds;
@@ -527,9 +530,10 @@ function showLeaderboard(filteredData = null) {
   }
 }
 
-viewAllBtn.addEventListener("click", () => showLeaderboard("all"));
-viewStudentsBtn.addEventListener("click", () => showLeaderboard("students"));
-viewTeachersBtn.addEventListener("click", () => showLeaderboard("teachers"));
+viewAllBtn.addEventListener("click", () => renderLeaderboard(applyLeaderboardFilter(cachedLeaderboardData, "all")));
+viewStudentsBtn.addEventListener("click", () => renderLeaderboard(applyLeaderboardFilter(cachedLeaderboardData, "students")));
+viewTeachersBtn.addEventListener("click", () => renderLeaderboard(applyLeaderboardFilter(cachedLeaderboardData, "teachers")));
+
 
 // Caching variables
 let cachedLeaderboardData = null;
