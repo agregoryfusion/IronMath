@@ -2,7 +2,8 @@ name: Clean Firestore Leaderboard
 
 on:
   schedule:
-    - cron: "0 16-1 * * 1-5"  # every hour, 9am–6pm, Mon–Fri
+    - cron: "0 16-23 * * 1-5"  # 9 AM–4 PM MST
+    - cron: "0 0-1 * * 1-5"    # 5 PM–6 PM MST
   workflow_dispatch:
 
 jobs:
