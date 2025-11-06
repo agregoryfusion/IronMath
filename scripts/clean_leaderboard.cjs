@@ -1,4 +1,4 @@
-// scripts/clean_leaderboard.js
+// clean_leaderboard.cjs
 const { Firestore } = require("@google-cloud/firestore");
 
 function getFirestoreFromEnv() {
@@ -12,55 +12,91 @@ function getFirestoreFromEnv() {
   });
 }
 
+function normalizeName(name) {
+  if (!name) return "Player";
+  return name
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ")
+    .trim();
+}
+
+function buildCanonicalId(playerName) {
+  return normalizeName(playerName);
+}
+
 async function main() {
   const db = getFirestoreFromEnv();
   const leaderboardRef = db.collection("leaderboard");
-  const snap = await leaderboardRef.get();
-  console.log(`Fetched ${snap.size} leaderboard docs`);
+  const snapshot = await leaderboardRef.get();
+  console.log(`Fetched ${snapshot.size} leaderboard docs`);
 
   const grouped = {};
-  snap.forEach(doc => {
+  snapshot.forEach(doc => {
     const d = doc.data() || {};
     const key = (d.playerName || "").trim().toLowerCase();
     if (!key) return;
     (grouped[key] ||= []).push({ id: doc.id, ...d });
   });
 
-  const toDelete = [];
-  for (const key of Object.keys(grouped)) {
-    const list = grouped[key];
-    if (list.length <= 1) continue;
+  let updated = 0;
+  let deleted = 0;
+  let renamed = 0;
 
-    list.sort((a, b) => {
-      const qa = a.questionsAnswered ?? 0;
-      const qb = b.questionsAnswered ?? 0;
-      if (qb === qa) {
-        const ta = a.totalTime ?? Number.POSITIVE_INFINITY;
-        const tb = b.totalTime ?? Number.POSITIVE_INFINITY;
-        return ta - tb;
-      }
-      return qb - qa;
+  for (const key of Object.keys(grouped)) {
+    const entries = grouped[key];
+    if (entries.length === 0) continue;
+
+    // Sort by best first (most questions, then least total time)
+    entries.sort((a, b) => {
+      if (b.questionsAnswered === a.questionsAnswered)
+        return (a.totalTime ?? Infinity) - (b.totalTime ?? Infinity);
+      return (b.questionsAnswered ?? 0) - (a.questionsAnswered ?? 0);
     });
 
-    for (const extra of list.slice(1)) {
-      toDelete.push(extra.id);
-    }
-  }
+    const best = entries[0];
+    const canonicalId = buildCanonicalId(best.playerName);
 
-  // Chunk deletes
-  const chunk = 450;
-  for (let i = 0; i < toDelete.length; i += chunk) {
+    const canonicalRef = leaderboardRef.doc(canonicalId);
+    const canonicalSnap = await canonicalRef.get();
+
     const batch = db.batch();
-    for (const id of toDelete.slice(i, i + chunk)) {
-      batch.delete(leaderboardRef.doc(id));
+
+    if (!canonicalSnap.exists) {
+      // No existing record → create it (copy best entry)
+      batch.set(canonicalRef, best);
+      renamed++;
+    } else {
+      // Compare & update only if new one is better
+      const existing = canonicalSnap.data();
+      const isBetter =
+        best.questionsAnswered > (existing.questionsAnswered ?? 0) ||
+        (best.questionsAnswered === existing.questionsAnswered &&
+          best.totalTime < (existing.totalTime ?? Infinity));
+
+      if (isBetter) {
+        batch.set(canonicalRef, best, { merge: true });
+        updated++;
+      }
     }
+
+    // Delete all other redundant entries except the canonical one
+    for (const extra of entries) {
+      if (extra.id !== canonicalId) {
+        batch.delete(leaderboardRef.doc(extra.id));
+        deleted++;
+      }
+    }
+
     await batch.commit();
   }
 
-  console.log(`Deleted ${toDelete.length} duplicate docs.`);
+  console.log(
+    `✅ Cleanup complete: ${renamed} new names created, ${updated} updated, ${deleted} duplicates removed.`
+  );
 }
 
 main().catch(err => {
-  console.error(err);
+  console.error("❌ Error running cleanup:", err);
   process.exit(1);
 });
