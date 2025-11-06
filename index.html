@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.21</p>
+<p id="version">v1.0.22</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -90,7 +90,7 @@
       <table>
         <thead>
           <tr>
-            <th>#</th><th>Player</th><th>Stage</th><th>Questions</th><th>Time (s)</th><th>Date</th>
+            <th>#</th><th>Player</th><th>Questions</th><th>Time (s)</th><th>Date</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -645,7 +645,6 @@ function renderLeaderboard(data) {
     tr.innerHTML = `
       <td>${rank++}</td>
       <td>${escapeHtml(d.playerName || "???")}</td>
-      <td>${d.stageReached ?? "?"}</td>
       <td>${d.questionsAnswered ?? "?"}</td>
       <td>${(d.totalTime ?? 0).toFixed(2)}</td>
       <td>${mm}/${dd}/${yyyy}</td>
