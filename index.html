@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.19</p>
+<p id="version">v1.0.20</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -157,33 +157,63 @@ const firebaseConfig = {
     const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
     let playerName = "Player";
 
-    onAuthStateChanged(auth, (user)=>{
-      if(user){
-        playerName = user.displayName || parseEmailToName(user.email);
-        loginScreen.style.display = "none";
-        endScreen.style.display = "none";
-        gameContainer.style.display = "block";
-        startGame(); // auto start on refresh
-      }else{
-        gameContainer.style.display = "none";
-        endScreen.style.display = "none";
-        loginScreen.style.display = "flex";
-      }
-    });
+let isTeacher = false;
+let isStudent = false;
 
-    loginBtn.addEventListener("click", async ()=>{
-      try{
-        const result = await signInWithPopup(auth, provider);
-        const u = result.user;
-        playerName = u.displayName || parseEmailToName(u.email);
-        loginScreen.style.display = "none";
-        gameContainer.style.display = "block";
-        startGame();
-      }catch(e){
-        console.error("Sign-in error:", e);
-        loginStatus.textContent = "Sign-in failed: " + (e?.message || e);
-      }
-    });
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    playerName = user.displayName || parseEmailToName(user.email);
+
+    const email = user.email?.toLowerCase() || "";
+    if (email.endsWith("@fusionacademy.com")) {
+      isTeacher = true;
+      isStudent = false;
+    } else if (email.endsWith("@fusionacademy.me")) {
+      isStudent = true;
+      isTeacher = false;
+    } else {
+      isTeacher = false;
+      isStudent = false;
+    }
+
+    loginScreen.style.display = "none";
+    endScreen.style.display = "none";
+    gameContainer.style.display = "block";
+    startGame();
+  } else {
+    gameContainer.style.display = "none";
+    endScreen.style.display = "none";
+    loginScreen.style.display = "flex";
+  }
+});
+
+loginBtn.addEventListener("click", async ()=>{
+  try{
+    const result = await signInWithPopup(auth, provider);
+    const u = result.user;
+    playerName = u.displayName || parseEmailToName(u.email);
+
+    const email = u.email?.toLowerCase() || "";
+    if (email.endsWith("@fusionacademy.com")) {
+      isTeacher = true;
+      isStudent = false;
+    } else if (email.endsWith("@fusionacademy.me")) {
+      isStudent = true;
+      isTeacher = false;
+    } else {
+      isTeacher = false;
+      isStudent = false;
+    }
+
+    loginScreen.style.display = "none";
+    gameContainer.style.display = "block";
+    startGame();
+  }catch(e){
+    console.error("Sign-in error:", e);
+    loginStatus.textContent = "Sign-in failed: " + (e?.message || e);
+  }
+});
+
 
     /* ===================== Game Settings ===================== */
     const SIGMA_SCALE = 6;       // normal distribution width across product range
@@ -486,15 +516,17 @@ function resetRunState() {
     /* ===================== Uploads + Leaderboard ===================== */
 async function uploadSession(totalTrue) {
   try {
-    const payload = {
-      sessionID: sessionId,
-      playerName,
-      stageReached: stage,
-      totalTime: totalTrue,
-      penaltyTime: penaltySeconds,
-      questionsAnswered: correctCount,
-      dateAdded: Date.now()
-    };
+const payload = {
+  sessionID: sessionId,
+  playerName,
+  stageReached: stage,
+  totalTime: totalTrue,
+  penaltyTime: penaltySeconds,
+  questionsAnswered: correctCount,
+  dateAdded: Date.now(),
+  isTeacher,
+  isStudent
+};
 
     const answersArray = runData.results.map(q => ({
       a: q.a,
