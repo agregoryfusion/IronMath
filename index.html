@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.12</p>
+<p id="version">v1.0.13</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -377,7 +377,7 @@ function resetRunState() {
                       timeTaken: (performance.now() - qStartTs) / 1000,
                       mistakes: mistakesThisQuestion,
                       success: true
-                      loggedThisQuestion = true;
+                      loggedThisQuestion = true});
           }
           return gameOver();
         }
