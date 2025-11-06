@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.22</p>
+<p id="version">v1.0.23</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -542,9 +542,12 @@ const payload = {
     await setDoc(sessionRef, { ...payload, answers: answersArray }, { merge: false });
 
     // Add leaderboard summary (unchanged)
-    await addDoc(collection(db, "leaderboard"), payload);
+await addDoc(collection(db, "leaderboard"), payload);
 
-    document.getElementById("saved-status").textContent = "Saved ✓";
+// ✅ Update the local cache immediately
+updateCachedLeaderboardWithNewScore(payload);
+
+document.getElementById("saved-status").textContent = "Saved ✓";
   } catch (e) {
     console.error("Upload failed", e);
     const s = document.getElementById("saved-status");
@@ -571,6 +574,53 @@ viewTeachersBtn.addEventListener("click", () => renderLeaderboard(applyLeaderboa
 let cachedLeaderboardData = null;
 let lastLeaderboardFetchTime = 0;
 const LEADERBOARD_CACHE_DURATION = 60000; // 60 seconds
+function updateCachedLeaderboardWithNewScore(newEntry) {
+  if (!newEntry?.playerName) return;
+
+  const key = (newEntry.playerName || "").trim().toLowerCase();
+  if (!cachedLeaderboardData) cachedLeaderboardData = [];
+
+  // Check if this player already exists in cache
+  const existingIndex = cachedLeaderboardData.findIndex(
+    d => (d.playerName || "").trim().toLowerCase() === key
+  );
+
+  if (existingIndex !== -1) {
+    const old = cachedLeaderboardData[existingIndex];
+
+    // Replace only if the new one is better
+    const isBetter =
+      newEntry.questionsAnswered > (old.questionsAnswered ?? 0) ||
+      (newEntry.questionsAnswered === old.questionsAnswered &&
+        newEntry.totalTime < (old.totalTime ?? Infinity));
+
+    if (isBetter) {
+      cachedLeaderboardData[existingIndex] = newEntry;
+    }
+  } else {
+    // First time this player has ever appeared
+    cachedLeaderboardData.push(newEntry);
+  }
+
+  // Sort the cache again by leaderboard rules
+  cachedLeaderboardData.sort((a, b) => {
+    if (b.questionsAnswered === a.questionsAnswered)
+      return a.totalTime - b.totalTime;
+    return b.questionsAnswered - a.questionsAnswered;
+  });
+
+  // Re-render immediately using whatever filter is active
+  const activeFilter =
+    document.querySelector("#leaderboardButtons button.active")?.id || "allBtn";
+  const filterType =
+    activeFilter.includes("student")
+      ? "students"
+      : activeFilter.includes("teacher")
+      ? "teachers"
+      : "all";
+
+  renderLeaderboard(applyLeaderboardFilter(cachedLeaderboardData, filterType));
+}
 
 async function loadLeaderboard(filterType = "all", forceRefresh = false) {
   try {
