@@ -19,7 +19,7 @@ jobs:
         working-directory: ./scripts   # 👈 key change
 
       - name: Run cleanup
-        run: node clean_leaderboard.js
-        working-directory: ./scripts   # 👈 key change
+        run: node clean_leaderboard.cjs
+        working-directory: ./scripts
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
