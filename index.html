@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.16</p>
+<p id="version">v1.0.17</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -503,7 +503,7 @@ async function uploadSession(totalTrue) {
     // Add leaderboard summary (unchanged)
     await addDoc(collection(db, "leaderboard"), payload);
 
-    document.getElementById("saved-status").textContent = "Saved ✓ (with answers array)";
+    document.getElementById("saved-status").textContent = "Saved ✓";
   } catch (e) {
     console.error("Upload failed", e);
     const s = document.getElementById("saved-status");
