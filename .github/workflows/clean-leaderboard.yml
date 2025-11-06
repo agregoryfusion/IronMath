@@ -13,8 +13,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install
-        working-directory: .
-      - run: node scripts/clean_leaderboard.js
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./scripts   # 👈 key change
+
+      - name: Run cleanup
+        run: node clean_leaderboard.js
+        working-directory: ./scripts   # 👈 key change
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
