@@ -50,7 +50,7 @@
 </head>
 <body>
   <h1>IronMath</h1>
-<p id="version">v1.0.11</p>
+<p id="version">v1.0.12</p>
   <!-- Sign-In Screen -->
   <div id="login-screen">
     <p class="note" style="color:#c9d2db">Please sign in with your Microsoft account to continue.</p>
@@ -370,7 +370,14 @@ function resetRunState() {
           if (!loggedThisQuestion) {
             const trueT = (performance.now() - qStartTs) / 1000;
             totalTimeTrue += trueT;
-            loggedThisQuestion = true;
+                      runData.results.push({
+                      a: current.a,
+                      b: current.b,
+                      stage,
+                      timeTaken: (performance.now() - qStartTs) / 1000,
+                      mistakes: mistakesThisQuestion,
+                      success: true
+                      loggedThisQuestion = true;
           }
           return gameOver();
         }
@@ -454,17 +461,7 @@ function resetRunState() {
         `Avg time/question: ${avgTrue.toFixed(2)} s (<span id="end-avg-with-penalty">${avgPen.toFixed(2)}</span> s with penalties)`;
      /* document.getElementById("session-id").textContent = `Session ID: ${sessionId}`; */
   // If player ran out of time mid-question, log that as a failed entry
-  if (current && !loggedThisQuestion) {
-    runData.results.push({
-      a: current.a,
-      b: current.b,
-      stage,
-      timeTaken: TIMER_SECONDS, // full timer used
-      mistakes: mistakesThisQuestion,
-      success: false,
-      dateAdded: Date.now()
-    });
-  }
+
       uploadSession(totalTrue);
     }
 
