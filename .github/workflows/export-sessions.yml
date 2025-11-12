@@ -1,0 +1,33 @@
+name: Export Firestore Sessions to CSV (one-time)
+
+on:
+  workflow_dispatch: {}   # run manually from the Actions tab
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm install
+        working-directory: ./scripts
+
+      - name: Run export
+        run: node export_sessions.cjs
+        working-directory: ./scripts
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+
+      - name: Upload CSVs
+        uses: actions/upload-artifact@v4
+        with:
+          name: firestore-csv-exports
+          path: scripts/outputs/*.csv
+          if-no-files-found: error
