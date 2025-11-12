@@ -6,11 +6,3 @@
     "@google-cloud/firestore": "^7.10.0"
   }
 }
-{
-  "name": "ironmath-firestore-export",
-  "private": true,
-  "type": "commonjs",
-  "dependencies": {
-    "@google-cloud/firestore": "^7.10.0"
-  }
-}
