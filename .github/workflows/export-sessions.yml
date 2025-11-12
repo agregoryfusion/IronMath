@@ -1,7 +1,7 @@
 name: Export Firestore Sessions to CSV (one-time)
 
 on:
-  workflow_dispatch: {}   # run manually from the Actions tab
+  workflow_dispatch: {}
 
 jobs:
   export:
@@ -14,6 +14,104 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Create script files
+        run: |
+          mkdir -p scripts/outputs
+
+          cat > scripts/package.json <<'EOF'
+          {
+            "name": "ironmath-firestore-export",
+            "private": true,
+            "type": "commonjs",
+            "dependencies": {
+              "@google-cloud/firestore": "^7.10.0"
+            }
+          }
+          EOF
+
+          cat > scripts/export_sessions.cjs <<'EOF'
+          const fs = require("fs");
+          const path = require("path");
+          const { Firestore } = require("@google-cloud/firestore");
+
+          function getFirestoreFromEnv() {
+            const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+            if (!raw) throw new Error("Missing env GOOGLE_APPLICATION_CREDENTIALS_JSON");
+            const creds = JSON.parse(raw);
+            return new Firestore({
+              projectId: creds.project_id,
+              credentials: { client_email: creds.client_email, private_key: creds.private_key },
+            });
+          }
+
+          function csvEscape(value) {
+            if (value === null || value === undefined) return "";
+            const s = String(value);
+            return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+          }
+
+          async function main() {
+            const db = getFirestoreFromEnv();
+
+            const outDir = path.join(process.cwd(), "outputs");
+            fs.mkdirSync(outDir, { recursive: true });
+
+            const sessionsCsv = [
+              "dateAdded,penaltyTime,playerName,questionsAnswered,sessionID,stageReached,totalTime",
+            ];
+            const answersCsv = [
+              "a,b,dateAdded,mistakes,stage,success,timeTaken,playerName",
+            ];
+
+            const snap = await db.collection("sessions").get();
+            console.log(\`Found \${snap.size} session docs\`);
+
+            snap.forEach((doc) => {
+              const s = doc.data() || {};
+
+              // sessions_export.csv
+              const row = [
+                s.dateAdded ?? "",
+                s.penaltyTime ?? "",
+                s.playerName ?? "",
+                s.questionsAnswered ?? "",
+                s.sessionID ?? doc.id,
+                s.stageReached ?? "",
+                s.totalTime ?? "",
+              ].map(csvEscape).join(",");
+              sessionsCsv.push(row);
+
+              // answers_export.csv (flatten answers array if present)
+              const answers = Array.isArray(s.answers) ? s.answers : null;
+              if (answers && answers.length) {
+                for (const a of answers) {
+                  const arow = [
+                    a.a ?? "",
+                    a.b ?? "",
+                    a.dateAdded ?? "",
+                    a.mistakes ?? "",
+                    a.stage ?? "",
+                    a.success ?? "",
+                    a.timeTaken ?? "",
+                    s.playerName ?? "",
+                  ].map(csvEscape).join(",");
+                  answersCsv.push(arow);
+                }
+              }
+            });
+
+            fs.writeFileSync(path.join(outDir, "sessions_export.csv"), sessionsCsv.join("\n"));
+            fs.writeFileSync(path.join(outDir, "answers_export.csv"), answersCsv.join("\n"));
+
+            console.log("Wrote outputs/sessions_export.csv and outputs/answers_export.csv");
+          }
+
+          main().catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+          EOF
 
       - name: Install deps
         run: npm install
