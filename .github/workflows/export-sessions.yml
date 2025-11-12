@@ -7,7 +7,7 @@ jobs:
   export:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -15,8 +15,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Create script files
+      - name: Create clean script files
+        shell: bash
         run: |
+          set -euo pipefail
+          rm -rf scripts
           mkdir -p scripts/outputs
 
           cat > scripts/package.json <<'EOF'
@@ -65,7 +68,7 @@ jobs:
             ];
 
             const snap = await db.collection("sessions").get();
-            console.log(\`Found \${snap.size} session docs\`);
+            console.log(`Found ${snap.size} session docs`);
 
             snap.forEach((doc) => {
               const s = doc.data() || {};
@@ -112,6 +115,10 @@ jobs:
             process.exit(1);
           });
           EOF
+
+          echo "----- File head (export_sessions.cjs) -----"
+          sed -n '1,80p' scripts/export_sessions.cjs
+          echo "------------------------------------------"
 
       - name: Install deps
         run: npm install
