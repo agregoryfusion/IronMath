@@ -55,8 +55,16 @@ jobs:
           function getPgClientFromEnv() {
             const conn = process.env.SUPABASE_DB_URL;
             if (!conn) throw new Error("Missing env SUPABASE_DB_URL");
-            return new Client({ connectionString: conn });
+
+            // Force IPv4 hostname resolution
+            process.env.PGHOSTADDR = "ipv4";
+
+            return new Client({
+              connectionString: conn,
+              keepAlive: true
+            });
           }
+
 
           function toDate(millisOrNull) {
             if (!millisOrNull || typeof millisOrNull !== "number") return new Date();
@@ -226,3 +234,5 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGHOSTADDR: ipv4
+
