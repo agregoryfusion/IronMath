@@ -160,59 +160,71 @@ const firebaseConfig = {
 let isTeacher = false;
 let isStudent = false;
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    playerName = user.displayName || parseEmailToName(user.email);
-
-    const email = user.email?.toLowerCase() || "";
-    if (email.endsWith("@fusionacademy.com")) {
-      isTeacher = true;
-      isStudent = false;
-    } else if (email.endsWith("@fusionacademy.me")) {
-      isStudent = true;
-      isTeacher = false;
-    } else {
-      isTeacher = false;
-      isStudent = false;
-    }
-
-    loginScreen.style.display = "none";
-    endScreen.style.display = "none";
-    gameContainer.style.display = "block";
-    startGame();
+function setRoleFromEmail(email) {
+  const lower = (email || "").toLowerCase();
+  if (lower.endsWith("@fusionacademy.com")) {
+    isTeacher = true;
+    isStudent = false;
+  } else if (lower.endsWith("@fusionacademy.me")) {
+    isStudent = true;
+    isTeacher = false;
   } else {
-    gameContainer.style.display = "none";
-    endScreen.style.display = "none";
-    loginScreen.style.display = "flex";
+    isTeacher = false;
+    isStudent = false;
   }
-});
+}
 
-loginBtn.addEventListener("click", async ()=>{
-  try{
-    const result = await signInWithPopup(auth, provider);
-    const u = result.user;
-    playerName = u.displayName || parseEmailToName(u.email);
+// -------- FILE MODE: bypass Firebase auth entirely --------
+if (isFileMode) {
+  // Default local identity
+  playerName = "Alex Gregory";
+  isTeacher = true;     // tweak if you want student instead
+  isStudent = false;
 
-    const email = u.email?.toLowerCase() || "";
-    if (email.endsWith("@fusionacademy.com")) {
-      isTeacher = true;
-      isStudent = false;
-    } else if (email.endsWith("@fusionacademy.me")) {
-      isStudent = true;
-      isTeacher = false;
+  loginScreen.style.display = "none";
+  endScreen.style.display = "none";
+  gameContainer.style.display = "block";
+
+  startGame();
+} else {
+  // -------- NORMAL ONLINE MODE: use Firebase Microsoft login --------
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      playerName = user.displayName || parseEmailToName(user.email);
+      setRoleFromEmail(user.email);
+
+      loginScreen.style.display = "none";
+      endScreen.style.display = "none";
+      gameContainer.style.display = "block";
+      startGame();
     } else {
-      isTeacher = false;
-      isStudent = false;
+      gameContainer.style.display = "none";
+      endScreen.style.display = "none";
+      loginScreen.style.display = "flex";
     }
+  });
 
-    loginScreen.style.display = "none";
-    gameContainer.style.display = "block";
-    startGame();
-  }catch(e){
-    console.error("Sign-in error:", e);
-    loginStatus.textContent = "Sign-in failed: " + (e?.message || e);
-  }
-});
+  loginBtn.addEventListener("click", async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const u = result.user;
+      playerName = u.displayName || parseEmailToName(u.email);
+      setRoleFromEmail(u.email);
+
+      loginScreen.style.display = "none";
+      gameContainer.style.display = "block";
+      startGame();
+    } catch (e) {
+      console.error("Sign-in error:", e);
+      if (e?.code === "auth/unauthorized-domain") {
+        loginStatus.textContent =
+          "Sign-in failed: This domain is not authorized in Firebase. Add your GitHub Pages URL in Firebase Auth → Settings → Authorized domains.";
+      } else {
+        loginStatus.textContent = "Sign-in failed: " + (e?.message || e);
+      }
+    }
+  });
+}
 
 
     /* ===================== Game Settings ===================== */
