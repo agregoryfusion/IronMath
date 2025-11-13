@@ -30,4 +30,199 @@ jobs:
             "type": "commonjs",
             "dependencies": {
               "@google-cloud/firestore": "^7.10.0",
-              "
+              "pg": "^8.12.0"
+            }
+          }
+          EOF
+
+          cat > scripts/migrate_to_supabase.cjs <<'EOF'
+          const { Firestore } = require("@google-cloud/firestore");
+          const { Client } = require("pg");
+
+          function getFirestoreFromEnv() {
+            const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+            if (!raw) throw new Error("Missing env GOOGLE_APPLICATION_CREDENTIALS_JSON");
+            const creds = JSON.parse(raw);
+            return new Firestore({
+              projectId: creds.project_id,
+              credentials: {
+                client_email: creds.client_email,
+                private_key: creds.private_key,
+              },
+            });
+          }
+
+          function getPgClientFromEnv() {
+            const conn = process.env.SUPABASE_DB_URL;
+            if (!conn) throw new Error("Missing env SUPABASE_DB_URL");
+            return new Client({ connectionString: conn });
+          }
+
+          function toDate(millisOrNull) {
+            if (!millisOrNull || typeof millisOrNull !== "number") return new Date();
+            return new Date(millisOrNull);
+          }
+
+          async function main() {
+            const firestore = getFirestoreFromEnv();
+            const pg = getPgClientFromEnv();
+            await pg.connect();
+            console.log("Connected to Supabase Postgres");
+
+            const userCache = new Map();           // name -> user_id
+            const sessionIdByCode = new Map();     // Firebase sessionID string -> numeric session_id
+
+            async function getOrCreateUserByName(name, ts) {
+              const cleanName = (name || "Unknown").trim();
+              const key = cleanName.toLowerCase();
+              if (userCache.has(key)) return userCache.get(key);
+
+              const createdAt = ts || new Date();
+
+              const res = await pg.query(
+                "INSERT INTO public.users (email, name, created_at, last_login_at) VALUES ($1, $2, $3, $3) RETURNING user_id",
+                [null, cleanName, createdAt]
+              );
+              const id = res.rows[0].user_id;
+              userCache.set(key, id);
+              return id;
+            }
+
+            // ---------- MIGRATE SESSIONS + QUESTIONS ----------
+            console.log("Loading Firestore sessions...");
+            const sessionsSnap = await firestore.collection("sessions").get();
+            console.log("Found " + sessionsSnap.size + " session docs");
+
+            let sessionCount = 0;
+            let questionCount = 0;
+
+            for (const doc of sessionsSnap.docs) {
+              const s = doc.data() || {};
+              const name = s.playerName || s.name || "Unknown";
+              const createdAt = toDate(s.dateAdded);
+
+              const userId = await getOrCreateUserByName(name, createdAt);
+
+              const questionsAnswered = s.questionsAnswered ?? 0;
+              const trueTime = s.totalTime ?? 0;
+              const penaltyTime = s.penaltyTime ?? 0;
+              const totalTime = trueTime + penaltyTime;
+              const stageReached = s.stageReached ?? null;
+
+              const res = await pg.query(
+                "INSERT INTO public.sessions (user_id, name, questions_answered, true_time_seconds, penalty_time_seconds, total_time_seconds, stage_reached, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING session_id",
+                [
+                  userId,
+                  name,
+                  questionsAnswered,
+                  trueTime,
+                  penaltyTime,
+                  totalTime,
+                  stageReached,
+                  createdAt
+                ]
+              );
+
+              const sessionNumericId = res.rows[0].session_id;
+              if (s.sessionID) {
+                sessionIdByCode.set(String(s.sessionID), sessionNumericId);
+              }
+
+              sessionCount++;
+
+              const answers = Array.isArray(s.answers) ? s.answers : null;
+              if (answers && answers.length) {
+                for (const ans of answers) {
+                  const qTs = ans.dateAdded ? toDate(ans.dateAdded) : createdAt;
+                  await pg.query(
+                    "INSERT INTO public.questions (session_id, a, b, time_taken, mistakes, success, date_added, player_name) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+                    [
+                      sessionNumericId,
+                      ans.a ?? 0,
+                      ans.b ?? 0,
+                      ans.timeTaken ?? 0,
+                      ans.mistakes ?? 0,
+                      !!ans.success,
+                      qTs,
+                      name
+                    ]
+                  );
+                  questionCount++;
+                }
+              }
+            }
+
+            console.log("Inserted " + sessionCount + " sessions and " + questionCount + " questions");
+
+            // ---------- MIGRATE LEADERBOARD ----------
+            console.log("Loading Firestore leaderboard...");
+            const lbSnap = await firestore.collection("leaderboard").get();
+            console.log("Found " + lbSnap.size + " leaderboard docs");
+
+            let lbCount = 0;
+
+            for (const doc of lbSnap.docs) {
+              const d = doc.data() || {};
+              const name = d.playerName || "Unknown";
+              const ts = toDate(d.dateAdded);
+
+              const userId = await getOrCreateUserByName(name, ts);
+
+              const stageReached = d.stageReached ?? null;
+              const questionsAnswered = d.questionsAnswered ?? 0;
+              const trueTime = d.totalTime ?? 0;
+              const penaltyTime = d.penaltyTime ?? 0;
+              const totalTime = trueTime + penaltyTime;
+
+              let sessionNumericId = null;
+              if (d.sessionID && sessionIdByCode.has(String(d.sessionID))) {
+                sessionNumericId = sessionIdByCode.get(String(d.sessionID));
+              }
+
+              const isTeacher = !!d.isTeacher;
+              const isStudent = !!d.isStudent;
+
+              await pg.query(
+                "INSERT INTO public.leaderboard (user_id, session_id, player_name, stage_reached, questions_answered, total_time_seconds, penalty_time_seconds, date_added, is_teacher, is_student) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+                [
+                  userId,
+                  sessionNumericId,
+                  name,
+                  stageReached,
+                  questionsAnswered,
+                  totalTime,
+                  penaltyTime,
+                  ts,
+                  isTeacher,
+                  isStudent
+                ]
+              );
+
+              lbCount++;
+            }
+
+            console.log("Inserted " + lbCount + " leaderboard rows");
+            await pg.end();
+            console.log("Migration complete.");
+          }
+
+          main().catch((err) => {
+            console.error("Migration failed:", err);
+            process.exit(1);
+          });
+          EOF
+
+          echo "----- migrate_to_supabase.cjs (first lines) -----"
+          sed -n '1,60p' scripts/migrate_to_supabase.cjs
+          echo "-------------------------------------------------"
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./scripts
+
+      - name: Run migration
+        run: node migrate_to_supabase.cjs
+        working-directory: ./scripts
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
