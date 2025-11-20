@@ -271,7 +271,7 @@
 
 <body>
 <h1>Fusion Fast Math</h1>
-<p id="version">v1.0.31</p>
+<p id="version">v1.0.32</p>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -322,11 +322,16 @@
   <div id="leaderboardContainer">
     <p id="leaderboardStatus"></p>
     <table>
-      <thead>
-        <tr>
-          <th>#</th><th>Player</th><th>Questions</th><th>Time (s)</th><th>Date</th>
-        </tr>
-      </thead>
+<thead>
+  <tr>
+    <th>#</th>
+    <th>Player</th>
+    <th>Questions</th>
+    <th>Time (s)</th>
+    <th>Time/Q (s)</th> <!-- NEW COLUMN -->
+    <th>Date</th>
+  </tr>
+</thead>
       <tbody></tbody>
     </table>
   </div>
@@ -865,14 +870,18 @@ function renderLeaderboard(data) {
     const dd = date ? String(date.getDate()).padStart(2, "0") : "--";
     const yyyy = date ? date.getFullYear() : "----";
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${rank++}</td>
-      <td>${escapeHtml(d.playerName || "???")}</td>
-      <td>${d.questionsAnswered ?? "?"}</td>
-      <td>${(d.totalTime ?? 0).toFixed(2)}</td>
-      <td>${mm}/${dd}/${yyyy}</td>
-    `;
+const avg = (d.totalTime && d.questionsAnswered)
+  ? (d.totalTime / d.questionsAnswered)
+  : 0;
+
+tr.innerHTML = `
+  <td>${rank++}</td>
+  <td>${escapeHtml(d.playerName || "???")}</td>
+  <td>${d.questionsAnswered ?? "?"}</td>
+  <td>${(d.totalTime ?? 0).toFixed(2)}</td>
+  <td>${avg.toFixed(3)}</td>   <!-- ★ Thousandth precision -->
+  <td>${mm}/${dd}/${yyyy}</td>
+`;
     lbBody.appendChild(tr);
   }
 }
