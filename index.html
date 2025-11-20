@@ -271,7 +271,7 @@
 
 <body>
 <h1>Fusion Fast Math</h1>
-<p id="version">v1.0.32</p>
+<p id="version">v1.0.33</p>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -870,6 +870,8 @@ function renderLeaderboard(data) {
     const dd = date ? String(date.getDate()).padStart(2, "0") : "--";
     const yyyy = date ? date.getFullYear() : "----";
 
+const tr = document.createElement("tr");   // ← this was missing
+
 const avg = (d.totalTime && d.questionsAnswered)
   ? (d.totalTime / d.questionsAnswered)
   : 0;
@@ -879,10 +881,12 @@ tr.innerHTML = `
   <td>${escapeHtml(d.playerName || "???")}</td>
   <td>${d.questionsAnswered ?? "?"}</td>
   <td>${(d.totalTime ?? 0).toFixed(2)}</td>
-  <td>${avg.toFixed(3)}</td>   <!-- ★ Thousandth precision -->
+  <td>${avg.toFixed(3)}</td>
   <td>${mm}/${dd}/${yyyy}</td>
 `;
-    lbBody.appendChild(tr);
+
+lbBody.appendChild(tr);
+
   }
 }
 
