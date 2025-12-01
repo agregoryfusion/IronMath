@@ -474,7 +474,10 @@ function toggleLeaderboard(filterType = "all") {
 }
 
 function getEmperorTopStudent() {
-  return cachedEmperorData?.[0] || null;
+  // Prefer monthly leaderboard if available, otherwise fall back to last cached view
+  const source = cachedMonthlyLeaderboard || cachedEmperorData || [];
+  const top = source.find(d => d.isStudent === true);
+  return top || null;
 }
 
 // Replace generic fallback helpers with direct inserts matching recordUserLogin's pattern

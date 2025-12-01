@@ -80,7 +80,7 @@ async function handleSignedIn(user) {
   try {
     const [userId] = await Promise.all([
       backend.recordUserLogin(email, playerName),
-      backend.fetchAndCacheLeaderboard(true)
+      backend.loadLeaderboard("students", "monthly", true)
     ]);
     window.currentUserId = userId;
   } catch (err) {
