@@ -288,6 +288,7 @@ function renderLeaderboard(data) {
     const mm = date ? String(date.getMonth() + 1).padStart(2, "0") : "--";
     const dd = date ? String(date.getDate()).padStart(2, "0") : "--";
     const yyyy = date ? date.getFullYear() : "----";
+    const tpq = d.questionsAnswered ? d.totalTime / d.questionsAnswered : null;
 
     const tr = document.createElement("tr");
 
@@ -304,6 +305,7 @@ function renderLeaderboard(data) {
       <td>${U.escapeHtml ? U.escapeHtml(d.playerName || "???") : (d.playerName || "???")}</td>
       <td>${d.questionsAnswered ?? "?"}</td>
       <td>${(d.totalTime ?? 0).toFixed(2)}</td>
+      <td>${tpq !== null ? tpq.toFixed(2) : "--"}</td>
       <td>${mm}/${dd}/${yyyy}</td>
     `;
     lbBody.appendChild(tr);
