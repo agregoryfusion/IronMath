@@ -12,6 +12,7 @@ const emperorScreen = document.getElementById("emperor-screen");
 const emperorName = document.getElementById("emperorName");
 const emperorScore = document.getElementById("emperorScore");
 const playBtn = document.getElementById("playBtn");
+const leaderboardBtn = document.getElementById("viewLeaderboardBtn");
 
 const gameContainer = document.getElementById("game-container");
 const endScreen = document.getElementById("end-screen");
@@ -125,5 +126,14 @@ if (playBtn) {
   playBtn.addEventListener("click", ()=>{
     emperorScreen.style.display = "none";
     (FM.timesTableGame || FM.game).startGame();
+  });
+}
+if (leaderboardBtn) {
+  leaderboardBtn.addEventListener("click", ()=>{
+    if (loadingScreen) loadingScreen.style.display = "none";
+    if (emperorScreen) emperorScreen.style.display = "none";
+    if (FM.timesTableGame && typeof FM.timesTableGame.showLeaderboardOnly === "function") {
+      FM.timesTableGame.showLeaderboardOnly();
+    }
   });
 }

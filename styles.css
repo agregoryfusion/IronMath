@@ -226,7 +226,7 @@ h1{margin:18px 0 6px;color:var(--accent)}
   100%{background-position:400%}
 }
 #playBtn{
-  margin-top:25px;
+  margin-top:0;
   background:var(--accent);
   padding:14px 24px;
   border:none;
@@ -237,6 +237,28 @@ h1{margin:18px 0 6px;color:var(--accent)}
 }
 #playBtn:hover{
   filter:brightness(1.1);
+}
+.emp-buttons{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  margin-top:25px;
+}
+.ghost-btn{
+  margin-top:0;
+  background:transparent;
+  color:var(--accent);
+  padding:12px 20px;
+  border-radius:10px;
+  border:2px solid var(--accent);
+  font-size:16px;
+  cursor:pointer;
+  transition:all .2s ease;
+}
+.ghost-btn:hover{
+  background:#1e90ff22;
+  filter:none;
 }
 
 /* LOADING */
@@ -340,6 +362,15 @@ h1{margin:18px 0 6px;color:var(--accent)}
 #end-screen button:hover{filter:brightness(1.05)}
 #session-id{color:#99a6b4;font-size:14px}
 #saved-status{color:#7fdca2;font-size:14px}
+#end-screen.leaderboard-only h3,
+#end-screen.leaderboard-only #end-questions,
+#end-screen.leaderboard-only #end-penalty,
+#end-screen.leaderboard-only #end-total,
+#end-screen.leaderboard-only #end-avg,
+#end-screen.leaderboard-only #session-id,
+#end-screen.leaderboard-only #saved-status{
+  display:none;
+}
 
 /* LEADERBOARD */
 #leaderboardContainer{

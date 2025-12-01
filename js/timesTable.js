@@ -6,6 +6,7 @@ const backend = FM.backend;
 // DOM
 const gameContainer = document.getElementById("game-container");
 const endScreen = document.getElementById("end-screen");
+const emperorScreen = document.getElementById("emperor-screen");
 const questionEl = document.getElementById("question");
 const answerEl = document.getElementById("answer");
 const stageInfo = document.getElementById("stage-info");
@@ -41,6 +42,7 @@ let runStartTs = 0;
 let mistakesThisQuestion = 0;
 
 let runData = { sessionID: "", results: [] };
+let leaderboardOnlyMode = false;
 
 function buildPairs(stage){
   const maxF = Math.floor(stage*(1+STRETCH_MULT));
@@ -135,6 +137,7 @@ function resetRunState() {
   mistakesThisQuestion = 0;
   timeLeft = TIMER_SECONDS;
   cancelAnimationFrame(rafId);
+  leaderboardOnlyMode = false;
 }
 
 function startGame(){
@@ -142,7 +145,14 @@ function startGame(){
   resetRunState();
   runStartTs = performance.now();
   gameContainer.style.display = "block";
-  if (endScreen) endScreen.style.display = "none";
+  if (endScreen) {
+    endScreen.style.display = "none";
+    endScreen.classList.remove("leaderboard-only");
+  }
+  if (lbWrap) {
+    lbWrap.classList.remove("show");
+    lbWrap.style.display = "none";
+  }
   nextQuestion();
 }
 
@@ -257,7 +267,10 @@ function gameOver(){
   cancelAnimationFrame(rafId);
   current = null;
   if (gameContainer) gameContainer.style.display = "none";
-  if (endScreen) endScreen.style.display = "block";
+  if (endScreen) {
+    endScreen.style.display = "block";
+    endScreen.classList.remove("leaderboard-only");
+  }
 
   if (lbWrap) {
     lbWrap.style.display = "block";
@@ -281,6 +294,8 @@ function gameOver(){
     `Avg time/question: ${avgTrue.toFixed(2)} s (<span id="end-avg-with-penalty">${avgPen.toFixed(2)}</span> s with penalties)`;
 
   uploadSession(totalTrue);
+
+  if (restartBtn) restartBtn.textContent = "Play Again";
 }
 
 async function uploadSession(totalTrue){
@@ -423,8 +438,38 @@ if (restartBtn) {
   });
 }
 
+function showLeaderboardOnly() {
+  // Stop any running timers and jump straight to leaderboard view
+  cancelAnimationFrame(rafId);
+  current = null;
+  if (gameContainer) gameContainer.style.display = "none";
+  if (emperorScreen) emperorScreen.style.display = "none";
+
+  if (endScreen) {
+    endScreen.classList.add("leaderboard-only");
+    endScreen.style.display = "block";
+  }
+
+  if (lbWrap) {
+    lbWrap.style.display = "block";
+    lbWrap.classList.add("show");
+  }
+
+  const s = document.getElementById("saved-status");
+  if (s) {
+    s.textContent = "";
+    s.style.color = "";
+  }
+
+  backend.loadLeaderboard("all", true);
+
+  leaderboardOnlyMode = true;
+  if (restartBtn) restartBtn.textContent = "Play";
+}
+
 // Expose under a game-specific namespace; keep backward compatibility
 FM.timesTableGame = {
-  startGame
+  startGame,
+  showLeaderboardOnly
 };
 FM.game = FM.timesTableGame;

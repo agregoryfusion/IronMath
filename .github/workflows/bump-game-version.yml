@@ -1,0 +1,70 @@
+name: Bump Game Version
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  bump:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Increment FM.GAME_VERSION in js/utils.js
+        id: bump
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const path = "js/utils.js";
+
+          if (!fs.existsSync(path)) {
+            console.log(`::warning ::${path} not found; skipping bump.`);
+            process.exit(0);
+          }
+
+          const src = fs.readFileSync(path, "utf8");
+          const match = src.match(/FM\.GAME_VERSION\s*=\s*"(\d+)\.(\d+)\.(\d+)"/);
+          if (!match) {
+            console.log('::warning ::FM.GAME_VERSION not found; skipping bump.');
+            process.exit(0);
+          }
+
+          const [_, major, minor, patch] = match;
+          const next = `${major}.${minor}.${Number(patch) + 1}`;
+          const updated = src.replace(match[0], `FM.GAME_VERSION = "${next}";`);
+
+          if (updated === src) {
+            console.log("::notice ::Version already up to date; no changes.");
+            process.exit(0);
+          }
+
+          fs.writeFileSync(path, updated, "utf8");
+          console.log(`::notice ::Bumped version to ${next}`);
+          NODE
+
+      - name: Commit changes
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: bump game version"
+
+      - name: Push changes
+        if: success()
+        run: git push
