@@ -1,11 +1,13 @@
 ﻿// auth.js - entry point: Firebase + emperor + start game
 import "./utils.js";
-import "./backend.js";
+import "./backend_main.js";
+import "./backend_timesTable.js";
 import "./timesTable.js";
 import "./ui.js";
 const FM = (window.FastMath = window.FastMath || {});
 const U = FM.utils;
-const backend = FM.backend;
+const backendMain = FM.backendMain || {};
+const backend = FM.backendTimesTable || {};
 
 const loadingScreen = document.getElementById("loading-screen");
 const emperorScreen = document.getElementById("emperor-screen");
@@ -79,7 +81,7 @@ async function handleSignedIn(user) {
 
   try {
     const [userId] = await Promise.all([
-      backend.recordUserLogin(email, playerName),
+      backendMain.recordUserLogin(email, playerName),
       backend.loadLeaderboard("students", "monthly", true)
     ]);
     window.currentUserId = userId;

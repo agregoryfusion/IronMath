@@ -4,7 +4,7 @@ const viewAllBtn = document.getElementById("viewAllBtn");
 const viewStudentsBtn = document.getElementById("viewStudentsBtn");
 const viewTeachersBtn = document.getElementById("viewTeachersBtn");
 const FM = (window.FastMath = window.FastMath || {});
-const backend = FM.backend || {};
+const backend = FM.backendTimesTable || {};
 
 let currentScope = "all";
 let currentTime = "monthly";

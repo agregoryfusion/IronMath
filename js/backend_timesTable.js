@@ -1,12 +1,13 @@
-// backend.js - Supabase + leaderboard + caching
+// backend_timesTable.js - Supabase + leaderboard + caching for Times Table game
 const FM = (window.FastMath = window.FastMath || {});
 const U = FM.utils || {};
 
-// Supabase config
+// Supabase config (reuse shared client if present)
 const SUPABASE_URL = "https://jfjlznxvofhjjlommdrd.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bSFpnR01TewY44SI8mLuLA_aX3bF3Lk";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = FM.supabaseClient || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+FM.supabaseClient = supabase;
 
 // DOM for leaderboard
 const lbWrap = document.getElementById("leaderboardContainer");
@@ -29,71 +30,6 @@ let cachedMonthlyLeaderboard = null;
 let cachedMonthlyFetchTime = 0;
 // Track last requested timeFilter so view buttons can reuse the same cache
 let lastLoadedTimeFilter = "monthly";
-
-async function recordUserLogin(email, name) {
-  const nowIso = new Date().toISOString();
-
-  const { data: existingUser, error: findErr } = await supabase
-    .from("users")
-    .select("*")
-    .eq("name", name)
-    .maybeSingle();
-
-  if (findErr) {
-    console.error("User lookup error:", findErr);
-  }
-
-  let userId = null;
-
-  if (existingUser) {
-    userId = existingUser.user_id;
-    const updatedEmail = existingUser.email || email;
-
-    const { error: updateErr } = await supabase
-      .from("users")
-      .update({
-        email: updatedEmail,
-        last_login_at: nowIso
-      })
-      .eq("user_id", userId);
-
-    if (updateErr) {
-      console.error("User update failed:", updateErr);
-    }
-  } else {
-    const { data: inserted, error: insertErr } = await supabase
-      .from("users")
-      .insert({
-        name,
-        email,
-        last_login_at: nowIso
-      })
-      .select()
-      .single();
-
-    if (insertErr) {
-      console.error("User insert failed:", insertErr);
-    } else {
-      userId = inserted.user_id;
-    }
-  }
-
-  if (userId !== null) {
-    const { error: loginErr } = await supabase
-      .from("logins")
-      .insert({
-        user_id: userId,
-        name,
-        login_at: nowIso
-      });
-
-    if (loginErr) {
-      console.error("Login insert failed:", loginErr);
-    }
-  }
-
-  return userId;
-}
 
 async function upsertLeaderboardEntry({
   playerName,
@@ -288,7 +224,11 @@ function renderLeaderboard(data) {
     const mm = date ? String(date.getMonth() + 1).padStart(2, "0") : "--";
     const dd = date ? String(date.getDate()).padStart(2, "0") : "--";
     const yyyy = date ? date.getFullYear() : "----";
-    const tpq = d.questionsAnswered ? d.totalTime / d.questionsAnswered : null;
+    const modifiedTime = Number(d.totalTime ?? 0);
+    const penalty = Number(d.penaltyTime ?? 0);
+    const rawTime = Math.max(0, modifiedTime - penalty);
+    const qCount = d.questionsAnswered || 0;
+    const rawTpq = qCount > 0 ? rawTime / qCount : null;
 
     const tr = document.createElement("tr");
 
@@ -304,8 +244,8 @@ function renderLeaderboard(data) {
       <td>${rank++}</td>
       <td>${U.escapeHtml ? U.escapeHtml(d.playerName || "???") : (d.playerName || "???")}</td>
       <td>${d.questionsAnswered ?? "?"}</td>
-      <td>${(d.totalTime ?? 0).toFixed(2)}</td>
-      <td>${tpq !== null ? tpq.toFixed(2) : "--"}</td>
+      <td>${rawTime.toFixed(2)}</td>
+      <td>${rawTpq !== null ? rawTpq.toFixed(2) : "--"}</td>
       <td>${mm}/${dd}/${yyyy}</td>
     `;
     lbBody.appendChild(tr);
@@ -442,9 +382,6 @@ async function loadLeaderboard(scopeFilter = "all", timeFilter = "monthly", forc
 
   lastLoadedTimeFilter = timeFilter;
 
-  // Show loading status immediately
-  //if (lbStatus) lbStatus.textContent = "Loading leaderboard...";
-
   // fetch appropriate cache
   if (timeFilter === "alltime") {
     await fetchAllTimeLeaderboard(!!forceRefresh);
@@ -465,7 +402,6 @@ async function loadLeaderboard(scopeFilter = "all", timeFilter = "monthly", forc
   }
 }
 
-
 function toggleLeaderboard(filterType = "all") {
   if (!lbWrap) return;
   const showing = lbWrap.classList.toggle("show");
@@ -479,8 +415,6 @@ function getEmperorTopStudent() {
   const top = source.find(d => d.isStudent === true);
   return top || null;
 }
-
-// Replace generic fallback helpers with direct inserts matching recordUserLogin's pattern
 
 async function insertSessionRow(sessionObj) {
   try {
@@ -560,16 +494,14 @@ if (viewTeachersBtn) {
 }
 
 // Expose in namespace
-FM.backend = {
+FM.backendTimesTable = {
   supabase,
-  recordUserLogin,
   upsertLeaderboardEntry,
   updateCachedLeaderboardWithNewScore,
   fetchAndCacheLeaderboard,
   loadLeaderboard,
   toggleLeaderboard,
   getEmperorTopStudent,
-  // new helpers
   insertSessionRow,
   insertQuestionRows,
   insertLeaderboardRow

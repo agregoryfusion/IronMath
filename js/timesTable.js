@@ -1,7 +1,7 @@
 // timesTable.js - Times Table game logic
 const FM = (window.FastMath = window.FastMath || {});
 const U = FM.utils || {};
-const backend = FM.backend;
+const backend = FM.backendTimesTable || {};
 
 // DOM
 const gameContainer = document.getElementById("game-container");

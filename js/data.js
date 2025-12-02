@@ -1,8 +1,8 @@
 import "./utils.js";
-import "./backend.js";
+import "./backend_timesTable.js";
 
 const FM = window.FastMath || {};
-const backend = FM.backend || {};
+const backend = FM.backendTimesTable || {};
 
 // DOM
 const playerSelect = document.getElementById("playerSelect");
@@ -22,7 +22,7 @@ let cachedQuestions = [];
 let availableDates = []; // yyyy-mm-dd strings
 
 async function loadQuestions(force = false) {
-  const backendNow = (window.FastMath && window.FastMath.backend) ? window.FastMath.backend : null;
+  const backendNow = (window.FastMath && window.FastMath.backendTimesTable) ? window.FastMath.backendTimesTable : null;
   if (!backendNow || typeof backendNow.fetchAndCacheQuestions !== "function") {
     throw new Error("Backend helper fetchAndCacheQuestions missing");
   }
