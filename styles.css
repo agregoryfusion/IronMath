@@ -103,6 +103,11 @@ h1{margin:18px 0 6px;color:var(--accent)}
   justify-content:center;
   text-align:center;
 }
+.app-card.placeholder .konami-img{
+  width:100%;
+  border-radius:10px;
+  display:block;
+}
 .app-card-heading{
   display:flex;
   align-items:center;

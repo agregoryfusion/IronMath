@@ -20,6 +20,35 @@ const homeScreen = document.getElementById("home-screen");
 const userNameEl = document.getElementById("userName");
 const userEmailEl = document.getElementById("userEmail");
 const signOutBtn = document.getElementById("signOutBtn");
+const placeholderCard = document.querySelector(".app-card.placeholder");
+
+// Konami code easter egg to replace the "Coming Soon?" text with an image
+const KONAMI_SEQUENCE = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+let konamiIndex = 0;
+function revealKonamiImage() {
+  if (!placeholderCard || placeholderCard.dataset.konamiShown === "1") return;
+  placeholderCard.dataset.konamiShown = "1";
+  const existingText = placeholderCard.querySelector(".muted");
+  if (existingText) existingText.remove();
+  const img = document.createElement("img");
+  img.src = "https://images.squarespace-cdn.com/content/v1/56608ba6e4b0527b5cbad513/1679335688247-43ISQGVR7SLDS1HMUXAG/mothra.png?format=750w";
+  img.alt = "Hidden preview unlocked";
+  img.className = "konami-img";
+  placeholderCard.appendChild(img);
+}
+window.addEventListener("keydown", (e) => {
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  const expected = KONAMI_SEQUENCE[konamiIndex];
+  if (key === expected || (expected === "b" && key === "b") || (expected === "a" && key === "a")) {
+    konamiIndex += 1;
+    if (konamiIndex === KONAMI_SEQUENCE.length) {
+      revealKonamiImage();
+      konamiIndex = 0;
+    }
+  } else {
+    konamiIndex = key === KONAMI_SEQUENCE[0] ? 1 : 0;
+  }
+});
 
 const firebaseConfig = {
   apiKey: "AIzaSyBUaOrUckCuTrc9MHB9jCF4TUsx-hWFC7g",
