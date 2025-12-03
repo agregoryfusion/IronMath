@@ -28,6 +28,15 @@ const TABLES = {
   questions: "addingup_questions"
 };
 
+// Normalize user_id so we don't pass invalid UUIDs to Supabase (which would 400)
+function safeUserId(raw) {
+  if (!raw) return null;
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(trimmed) ? trimmed : null;
+}
+
 function normalizeLeaderboardRow(r) {
   if (!r) return null;
   return {
@@ -214,6 +223,7 @@ FM.backendAddingUp = {
   supabase,
   loadLeaderboard,
   getEmperorTopStudent,
+  safeUserId,
   insertLeaderboardRow,
   insertSessionRow,
   insertQuestionRows,

@@ -249,15 +249,18 @@ async function uploadSession(totalTrue) {
     const totalWithPen = totalTrue + penaltySeconds;
     const auth = FM.auth || { playerName: "Player", isTeacher: false, isStudent: false };
     const playerName = auth.playerName || "Player";
+    // Only send user_id to Supabase if it looks like a valid UUID; otherwise use null to avoid 22P02 errors.
+    const userId = backend.safeUserId ? backend.safeUserId(window.currentUserId) : null;
+    const toFinite = (n, fallback = 0) => (Number.isFinite(n) ? n : fallback);
 
     const insertPayload = {
-      user_id: window.currentUserId || null,
+      user_id: userId,
       player_name: playerName,
-      questions_answered: correctCount,
-      true_time_seconds: totalTrue,
-      penalty_time_seconds: penaltySeconds,
-      total_time_seconds: totalWithPen,
-      final_total: currentTotal,
+      questions_answered: toFinite(correctCount, 0),
+      true_time_seconds: toFinite(totalTrue, 0),
+      penalty_time_seconds: toFinite(penaltySeconds, 0),
+      total_time_seconds: toFinite(totalWithPen, 0),
+      final_total: Number.isFinite(currentTotal) ? currentTotal : null,
       created_at: createdIso,
       version_number: FM.GAME_VERSION,
       is_teacher: !!auth.isTeacher,
@@ -276,12 +279,12 @@ async function uploadSession(totalTrue) {
     const questionsPayload = runData.results.map((q, idx) => ({
       session_id: sessionNumericId,
       question_number: q.questionNumber ?? idx + 1,
-      starting_total: q.base,
-      addend: q.addend,
-      expected_total: q.expected,
-      time_taken: q.timeTaken,
-      mistakes: q.mistakes,
-      success: q.success,
+      starting_total: toFinite(q.base, 0),
+      addend: toFinite(q.addend, 0),
+      expected_total: toFinite(q.expected, 0),
+      time_taken: toFinite(q.timeTaken, 0),
+      mistakes: toFinite(q.mistakes, 0),
+      success: !!q.success,
       date_added: createdIso,
       player_name: playerName,
       version_number: FM.GAME_VERSION
@@ -298,16 +301,16 @@ async function uploadSession(totalTrue) {
     if (correctCount > 0) {
       try {
         await backend.insertLeaderboardRow({
-          user_id: window.currentUserId || null,
+          user_id: userId,
           player_name: playerName,
-          questions_answered: correctCount,
-          total_time_seconds: totalWithPen,
-          penalty_time_seconds: penaltySeconds,
+          questions_answered: toFinite(correctCount, 0),
+          total_time_seconds: toFinite(totalWithPen, 0),
+          penalty_time_seconds: toFinite(penaltySeconds, 0),
           date_added: createdIso,
           is_teacher: !!auth.isTeacher,
           is_student: !!auth.isStudent,
           version_number: FM.GAME_VERSION,
-          final_total: currentTotal
+          final_total: Number.isFinite(currentTotal) ? currentTotal : null
         });
       } catch (lbe) {
         console.warn("Leaderboard insert failed:", lbe);
