@@ -288,9 +288,59 @@ h1{margin:18px 0 6px;color:var(--accent)}
 /* GAME */
 #game-container{
   display:none;
-  max-width:900px;
+  position:relative;
+  overflow:hidden;
+  max-width:1000px;
   margin:0 auto;
   padding:10px 16px
+}
+#towerCanvas{
+  position:absolute;
+  top:36px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(92vw, 620px);
+  height:clamp(220px, 45vh, 420px);
+  pointer-events:none;
+  z-index:0;
+}
+#towerSky{
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg, #121826 0%, #0d111a 100%);
+  opacity:0.55;
+}
+#towerBlocks{
+  position:absolute;
+  inset:0;
+}
+#towerFloor{
+  position:absolute;
+  left:4%;
+  right:4%;
+  bottom:-12px;
+  height:26px;
+  background:linear-gradient(180deg, #3a3f48 0%, #2a2f37 100%);
+  border-radius:8px 8px 4px 4px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.35);
+  border:1px solid #1d222b;
+}
+.tower-block{
+  position:absolute;
+  width:var(--tower-block-size, 30px);
+  height:var(--tower-block-size, 30px);
+  background:linear-gradient(135deg, #7cc3ff, #4ea2ff);
+  border:1px solid #1b3550;
+  border-radius:6px;
+  box-shadow:0 6px 14px rgba(0,0,0,0.35);
+  transition:bottom .45s cubic-bezier(.28,.74,.35,1.05), left .35s ease;
+}
+#question,
+#timerBar,
+#answer,
+#stage-info{
+  position:relative;
+  z-index:1;
 }
 #question{
   font-size:48px;
@@ -332,9 +382,7 @@ h1{margin:18px 0 6px;color:var(--accent)}
   box-shadow:0 0 15px #00bfff55
 }
 #stage-info{
-  margin-top:6px;
-  font-size:18px;
-  color:#c9d2db
+  display:none;
 }
 
 /* END SCREEN */

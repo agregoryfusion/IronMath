@@ -33,6 +33,122 @@ let leaderboardOnlyMode = false;
 let currentTotal = 0;
 
 let runData = { sessionID: "", results: [] };
+const tower = createTowerAnimator();
+
+function createTowerAnimator() {
+  const container = document.getElementById("towerCanvas");
+  const blocksLayer = document.getElementById("towerBlocks");
+  const FLOOR_HEIGHT = 22;
+  const cfg = {
+    block: 30,
+    gap: 4,
+    padPct: 0.04,
+    dropOvershoot: 60
+  };
+
+  let cols = 0;
+  let padPx = 0;
+  let heights = [];
+  const blocks = [];
+
+  function measure() {
+    if (!container) return false;
+    const width = container.clientWidth || 0;
+    padPx = Math.max(cfg.block, Math.round(width * cfg.padPct));
+    const usable = Math.max(cfg.block, width - padPx * 2);
+    const nextCols = Math.max(5, Math.floor((usable + cfg.gap) / (cfg.block + cfg.gap)));
+    const changed = nextCols !== cols;
+    cols = nextCols;
+    heights = new Array(cols).fill(0);
+    return changed;
+  }
+
+  function pickCol() {
+    let idx = 0;
+    let min = heights[0] ?? 0;
+    for (let i = 1; i < heights.length; i++) {
+      if (heights[i] < min) {
+        min = heights[i];
+        idx = i;
+      }
+    }
+    return idx;
+  }
+
+  function relayoutExisting() {
+    heights = new Array(cols).fill(0);
+    blocks.forEach((el) => {
+      const col = pickCol();
+      const left = padPx + col * (cfg.block + cfg.gap);
+      const bottom = FLOOR_HEIGHT + heights[col] * (cfg.block + cfg.gap);
+      el.style.left = `${left}px`;
+      el.style.bottom = `${bottom}px`;
+      heights[col] += 1;
+    });
+    updateViewOffset();
+  }
+
+  function reset() {
+    if (blocksLayer) blocksLayer.innerHTML = "";
+    blocks.length = 0;
+    measure();
+    updateViewOffset();
+  }
+
+  function addBlocks(count) {
+    if (!container || !blocksLayer || !Number.isFinite(count) || count <= 0) return;
+    if (!cols) measure();
+
+    for (let i = 0; i < count; i++) {
+      const col = pickCol();
+      const left = padPx + col * (cfg.block + cfg.gap);
+      const targetBottom = FLOOR_HEIGHT + heights[col] * (cfg.block + cfg.gap);
+      const startBottom = (container.clientHeight || 200) + cfg.dropOvershoot + Math.random() * 50;
+
+      const block = document.createElement("div");
+      block.className = "tower-block";
+      block.style.left = `${left}px`;
+      block.style.width = `${cfg.block}px`;
+      block.style.height = `${cfg.block}px`;
+      block.style.bottom = `${startBottom}px`;
+
+      const colorIdx = (heights[col] + i) % 5;
+      const palette = [
+        ["#7cc3ff", "#4ea2ff", "#1b3550"],
+        ["#7ff0c9", "#4ac59c", "#1f4a3c"],
+        ["#ffd27a", "#ffb347", "#5a3a1b"],
+        ["#ff9bb6", "#ff6f94", "#5a1f3a"],
+        ["#c7abff", "#a680ff", "#3d2c63"]
+      ];
+      const [c1, c2, border] = palette[colorIdx] || palette[0];
+      block.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+      block.style.borderColor = border;
+
+      blocksLayer.appendChild(block);
+      // Animate on the next frame so the transition runs
+      requestAnimationFrame(() => {
+        block.style.bottom = `${targetBottom}px`;
+      });
+
+      heights[col] += 1;
+      blocks.push(block);
+    }
+    updateViewOffset();
+  }
+
+  window.addEventListener("resize", () => {
+    if (!container) return;
+    const changed = measure();
+    if (changed && blocks.length > 0) relayoutExisting();
+  });
+
+  measure();
+
+  return {
+    reset,
+    addBlocks
+  };
+}
 
 function gaussianAddend() {
   const growthFactor = Math.floor(correctCount / 3);
@@ -89,6 +205,7 @@ function resetRunState() {
   cancelAnimationFrame(rafId);
   leaderboardOnlyMode = false;
   currentTotal = 0;
+  tower.reset();
 }
 
 function startGame() {
@@ -114,7 +231,7 @@ function nextQuestion() {
   questionEl.textContent = `${q.base} + ${q.addend}`;
   answerEl.value = "";
   answerEl.focus();
-  stageInfo.textContent = `Target total: ${currentTotal || q.expected}`;
+  if (stageInfo) stageInfo.textContent = "";
 
   let penaltySecondsThisRound = 0;
   timeLeft = TIMER_SECONDS;
@@ -158,6 +275,7 @@ function nextQuestion() {
       correctCount++;
       questionCount++;
       currentTotal = current.expected;
+      tower.addBlocks(current.addend || 0);
       runData.results.push({
         questionNumber: runData.results.length + 1,
         base: current.base,
@@ -346,3 +464,14 @@ FM.addingUpGame = {
   startGame,
   showLeaderboardOnly
 };
+  function updateViewOffset() {
+    if (!container || !blocksLayer) return;
+    const viewport = container.clientHeight || 220;
+    const maxHeightBlocks = Math.max(...heights, 0);
+    const currentHeight = maxHeightBlocks * (cfg.block + cfg.gap) + FLOOR_HEIGHT;
+    const padTop = 14;
+    const overflow = Math.max(0, currentHeight - (viewport - padTop));
+    blocksLayer.style.transform = `translateY(${overflow}px)`;
+    const floor = document.getElementById("towerFloor");
+    if (floor) floor.style.transform = `translateY(${overflow}px)`;
+  }
