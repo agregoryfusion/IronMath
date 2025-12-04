@@ -496,6 +496,10 @@ async function uploadSession(totalTrue) {
           version_number: FM.GAME_VERSION,
           final_total: Number.isFinite(currentTotal) ? currentTotal : null
         });
+        // Refresh leaderboard so the new score appears immediately
+        if (backend.loadLeaderboard) {
+          backend.loadLeaderboard("all", "monthly", true);
+        }
       } catch (lbe) {
         console.warn("Leaderboard insert failed:", lbe);
       }

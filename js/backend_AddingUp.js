@@ -60,13 +60,19 @@ function renderLeaderboard(rows) {
   }
   if (lbStatus) lbStatus.textContent = "";
 
+  const selfKey = (FM.auth && FM.auth.playerName) ? (FM.auth.playerName || "").trim().toLowerCase() : "";
+
   rows.forEach((row, idx) => {
+    const rowKey = (row.playerName || "").trim().toLowerCase();
     const tr = document.createElement("tr");
     const t = (n) => {
       const td = document.createElement("td");
       td.textContent = n;
       return td;
     };
+    if (selfKey && rowKey && rowKey === selfKey) {
+      tr.classList.add("lb-row-self");
+    }
     tr.appendChild(t(idx + 1));
     tr.appendChild(t(row.playerName || "?"));
     tr.appendChild(t(row.questionsAnswered ?? 0));
