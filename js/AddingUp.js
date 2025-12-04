@@ -17,6 +17,7 @@ const TIMER_SECONDS = 10;
 const PENALTY_MULT = 2;
 const START_MEAN = 5;
 const START_STD = 2;
+const ENABLE_TOWER_ANIMATION = false;
 
 let sessionId = U.buildSessionID ? U.buildSessionID("Player") : "Session";
 let questionCount = 0;
@@ -33,7 +34,12 @@ let leaderboardOnlyMode = false;
 let currentTotal = 0;
 
 let runData = { sessionID: "", results: [] };
-const tower = createTowerAnimator();
+const tower = ENABLE_TOWER_ANIMATION ? createTowerAnimator() : null;
+
+if (!ENABLE_TOWER_ANIMATION) {
+  const tc = document.getElementById("towerCanvas");
+  if (tc) tc.style.display = "none";
+}
 
 function createTowerAnimator() {
   const container = document.getElementById("towerCanvas");
@@ -42,21 +48,41 @@ function createTowerAnimator() {
   const cfg = {
     block: 30,
     gap: 4,
-    padPct: 0.04,
-    dropOvershoot: 60
+    minCols: 16,
+    fixedCols: 16,
+    dropOvershoot: 160,
+    batchTargetMs: 1000,
+    maxTicks: 30,
+    viewPadTop: 80
   };
 
   let cols = 0;
-  let padPx = 0;
+  let startX = 0;
+  let lastWidth = 0;
   let heights = [];
   const blocks = [];
 
-  function measure() {
+  function updateViewOffset() {
+    if (!container || !blocksLayer) return;
+    const viewport = container.clientHeight || 220;
+    const maxHeightBlocks = Math.max(...heights, 0);
+    const currentHeight = maxHeightBlocks * (cfg.block + cfg.gap) + FLOOR_HEIGHT;
+    const padTop = cfg.viewPadTop;
+    const overflow = Math.max(0, currentHeight - (viewport - padTop));
+    blocksLayer.style.transform = `translateY(${overflow}px)`;
+    const floor = document.getElementById("towerFloor");
+    if (floor) floor.style.transform = `translateY(${overflow}px)`;
+  }
+
+  function measure(force = false) {
     if (!container) return false;
     const width = container.clientWidth || 0;
-    padPx = Math.max(cfg.block, Math.round(width * cfg.padPct));
-    const usable = Math.max(cfg.block, width - padPx * 2);
-    const nextCols = Math.max(5, Math.floor((usable + cfg.gap) / (cfg.block + cfg.gap)));
+    if (!force && width === lastWidth && cols > 0) return false;
+    lastWidth = width;
+    const colWidth = cfg.block + cfg.gap;
+    const nextCols = cfg.fixedCols || Math.max(cfg.minCols, Math.floor((width + cfg.gap) / colWidth));
+    const totalWidth = nextCols * colWidth - cfg.gap;
+    startX = Math.max(0, (width - totalWidth) / 2);
     const changed = nextCols !== cols;
     cols = nextCols;
     heights = new Array(cols).fill(0);
@@ -79,7 +105,7 @@ function createTowerAnimator() {
     heights = new Array(cols).fill(0);
     blocks.forEach((el) => {
       const col = pickCol();
-      const left = padPx + col * (cfg.block + cfg.gap);
+      const left = startX + col * (cfg.block + cfg.gap);
       const bottom = FLOOR_HEIGHT + heights[col] * (cfg.block + cfg.gap);
       el.style.left = `${left}px`;
       el.style.bottom = `${bottom}px`;
@@ -95,15 +121,16 @@ function createTowerAnimator() {
     updateViewOffset();
   }
 
-  function addBlocks(count) {
-    if (!container || !blocksLayer || !Number.isFinite(count) || count <= 0) return;
-    if (!cols) measure();
+  function dropBatch(batchSize, colorOffset = 0) {
+    const maxH = Math.max(...heights, 0);
+    const currentTop = FLOOR_HEIGHT + maxH * (cfg.block + cfg.gap);
+    const baseStart = currentTop + cfg.dropOvershoot;
 
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < batchSize; i++) {
       const col = pickCol();
-      const left = padPx + col * (cfg.block + cfg.gap);
+      const left = startX + col * (cfg.block + cfg.gap);
       const targetBottom = FLOOR_HEIGHT + heights[col] * (cfg.block + cfg.gap);
-      const startBottom = (container.clientHeight || 200) + cfg.dropOvershoot + Math.random() * 50;
+      const startBottom = baseStart + Math.random() * 80;
 
       const block = document.createElement("div");
       block.className = "tower-block";
@@ -112,7 +139,7 @@ function createTowerAnimator() {
       block.style.height = `${cfg.block}px`;
       block.style.bottom = `${startBottom}px`;
 
-      const colorIdx = (heights[col] + i) % 5;
+      const colorIdx = (heights[col] + colorOffset + i) % 5;
       const palette = [
         ["#7cc3ff", "#4ea2ff", "#1b3550"],
         ["#7ff0c9", "#4ac59c", "#1f4a3c"],
@@ -125,7 +152,6 @@ function createTowerAnimator() {
       block.style.borderColor = border;
 
       blocksLayer.appendChild(block);
-      // Animate on the next frame so the transition runs
       requestAnimationFrame(() => {
         block.style.bottom = `${targetBottom}px`;
       });
@@ -133,29 +159,68 @@ function createTowerAnimator() {
       heights[col] += 1;
       blocks.push(block);
     }
-    updateViewOffset();
+  }
+
+  function addBlocks(count) {
+    if (!container || !blocksLayer || !Number.isFinite(count) || count <= 0) return;
+    if (!cols || (container.clientWidth || 0) !== lastWidth) measure(true);
+
+    let remaining = Math.floor(count);
+    const ticks = Math.min(cfg.maxTicks, Math.max(1, Math.ceil(remaining / 1)));
+    const base = Math.floor(remaining / ticks);
+    const extras = remaining - base * ticks;
+    const interval = cfg.batchTargetMs / ticks;
+    let tick = 0;
+    const colorOffset = Math.floor(Math.random() * 5);
+
+    const runTick = () => {
+      if (remaining <= 0) return;
+      const size = base + (tick < extras ? 1 : 0);
+      const batchSize = Math.min(size, remaining);
+      dropBatch(batchSize, colorOffset + tick);
+      remaining -= batchSize;
+      tick += 1;
+      if (remaining > 0) {
+        setTimeout(runTick, interval);
+      } else {
+        updateViewOffset();
+      }
+    };
+
+    runTick();
   }
 
   window.addEventListener("resize", () => {
     if (!container) return;
-    const changed = measure();
+    const changed = measure(true);
     if (changed && blocks.length > 0) relayoutExisting();
+    updateViewOffset();
   });
 
   measure();
 
   return {
     reset,
-    addBlocks
+    addBlocks,
+    remeasure: () => measure(true)
   };
 }
 
 function gaussianAddend() {
-  const growthFactor = Math.floor(correctCount / 3);
-  const mean = START_MEAN + growthFactor;
-  const std = START_STD + Math.min(10, correctCount * 0.2);
+  const qNum = Math.max(1, questionCount + 1);
+
+  // Exponent ramps from 1 at Q1 to 2 at Q1000 (linear)
+  const expStartQ = 1;
+  const expEndQ = 1000;
+  const t = Math.min(1, Math.max(0, (qNum - expStartQ) / (expEndQ - expStartQ)));
+  const exponent = 1 + t * (2 - 1);
+
+  // Mean grows roughly like q^exponent; std is half the question number
+  const mean = Math.pow(qNum, exponent);
+  const std = Math.max(1, qNum * 0.5);
+
   const min = 1;
-  const max = Math.max(9, Math.round(mean + std * 3));
+  const max = Math.max(mean + std * 3, min + 1);
   const sample = U.sampleTrunc ? U.sampleTrunc(min, max, mean, std) : mean;
   return Math.max(min, Math.round(sample));
 }
@@ -205,11 +270,12 @@ function resetRunState() {
   cancelAnimationFrame(rafId);
   leaderboardOnlyMode = false;
   currentTotal = 0;
-  tower.reset();
+  if (tower) tower.reset();
 }
 
 function startGame() {
   if (!gameContainer) return;
+  if (tower && typeof tower.remeasure === "function") tower.remeasure();
   resetRunState();
   runStartTs = performance.now();
   gameContainer.style.display = "block";
@@ -275,7 +341,7 @@ function nextQuestion() {
       correctCount++;
       questionCount++;
       currentTotal = current.expected;
-      tower.addBlocks(current.addend || 0);
+      if (tower) tower.addBlocks(current.addend || 0);
       runData.results.push({
         questionNumber: runData.results.length + 1,
         base: current.base,
@@ -464,14 +530,3 @@ FM.addingUpGame = {
   startGame,
   showLeaderboardOnly
 };
-  function updateViewOffset() {
-    if (!container || !blocksLayer) return;
-    const viewport = container.clientHeight || 220;
-    const maxHeightBlocks = Math.max(...heights, 0);
-    const currentHeight = maxHeightBlocks * (cfg.block + cfg.gap) + FLOOR_HEIGHT;
-    const padTop = 14;
-    const overflow = Math.max(0, currentHeight - (viewport - padTop));
-    blocksLayer.style.transform = `translateY(${overflow}px)`;
-    const floor = document.getElementById("towerFloor");
-    if (floor) floor.style.transform = `translateY(${overflow}px)`;
-  }
