@@ -7,6 +7,7 @@ const answerInput = document.getElementById("answer");
 const feedbackEl = document.getElementById("feedback");
 const progressEl = document.getElementById("progress");
 const actionBtn = document.getElementById("actionBtn");
+const giveUpBtn = document.getElementById("giveUpBtn");
 
 const loadingScreen = document.getElementById("loading-screen");
 const emperorScreen = document.getElementById("emperor-screen");
@@ -88,6 +89,7 @@ let questionLog = [];
 let scopeFilter = "students";
 let timeFilter = "monthly";
 let leaderboardOnlyMode = false;
+let gameActive = false;
 
 function sanitizeAnswer(input) {
   // Allow letters, spaces, apostrophes, periods, and hyphens; strip everything else.
@@ -138,6 +140,7 @@ function startGame() {
   timeFilter = "monthly";
   scopeFilter = "students";
   leaderboardOnlyMode = false;
+  gameActive = true;
   endScreen?.classList.remove("leaderboard-only");
 
   if (loadingScreen) loadingScreen.style.display = "none";
@@ -202,12 +205,18 @@ async function saveResults(totalTimeSec) {
   }
 }
 
-function finishGame() {
+function finishGame(options = {}) {
+  if (!gameActive) return;
+  gameActive = false;
   const totalTimeSec = (performance.now() - startTime) / 1000;
   if (gameContainer) gameContainer.style.display = "none";
   if (endScreen) endScreen.style.display = "block";
   if (restartBtn) restartBtn.textContent = "Play Again";
-  if (endQuestions) endQuestions.textContent = `States correct: ${correctCount} / ${pool.length}`;
+  const answeredCount = questionLog.length;
+  const questionsCount = options.gaveUp ? answeredCount : pool.length;
+  const displayTotal = questionsCount || pool.length;
+  const stoppedLabel = options.gaveUp ? " (stopped early)" : "";
+  if (endQuestions) endQuestions.textContent = `States correct: ${correctCount} / ${displayTotal}${stoppedLabel}`;
   if (endTime) endTime.textContent = `Total time: ${totalTimeSec.toFixed(2)} s`;
   savedStatus.textContent = "Saving...";
   savedStatus.classList.remove("success", "error");
@@ -218,6 +227,7 @@ function finishGame() {
 }
 
 function recordAnswer(answer, skipped = false) {
+  if (!gameActive) return;
   const entry = pool[currentIndex];
   if (!entry) return;
   const elapsed = (performance.now() - questionStartTime) / 1000;
@@ -258,6 +268,7 @@ function handleSkip() {
 }
 
 function showLeaderboardOnly() {
+  gameActive = false;
   if (loadingScreen) loadingScreen.style.display = "none";
   if (emperorScreen) emperorScreen.style.display = "none";
   if (gameContainer) gameContainer.style.display = "none";
@@ -289,6 +300,11 @@ function handleAction() {
   } else {
     handleSubmit();
   }
+}
+
+function handleGiveUp() {
+  if (!gameActive) return;
+  finishGame({ gaveUp: true });
 }
 
 function bindEvents() {
@@ -345,6 +361,8 @@ function bindEvents() {
     scopeFilter = "teachers";
     backend.loadLeaderboard(scopeFilter, timeFilter, true);
   });
+
+  if (giveUpBtn) giveUpBtn.addEventListener("click", handleGiveUp);
 }
 
 bindEvents();

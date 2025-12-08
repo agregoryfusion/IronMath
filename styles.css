@@ -443,6 +443,21 @@ h1{margin:18px 0 6px;color:var(--accent)}
 #stage-info{
   display:none;
 }
+.danger-btn{
+  background:linear-gradient(90deg, #ff4d4d, #d61f1f);
+  color:#fff;
+  border:none;
+  padding:10px 20px;
+  border-radius:12px;
+  font-size:16px;
+  font-weight:800;
+  cursor:pointer;
+  margin-top:6px;
+  box-shadow:0 0 14px rgba(214,31,31,0.35);
+  transition:filter .15s ease, transform .1s ease;
+}
+.danger-btn:hover{filter:brightness(1.05);}
+.danger-btn:active{transform:translateY(1px);}
 
 /* END SCREEN */
 #end-screen{
