@@ -394,6 +394,7 @@ function showLeaderboardOnly() {
     lbWrap.style.display = "block";
     lbWrap.classList.add("show");
   }
+  if (restartBtn) restartBtn.textContent = "Play";
   backend.loadLeaderboard("all", true);
 }
 
@@ -523,7 +524,7 @@ if (restartBtn) {
   restartBtn.addEventListener("click", () => {
     if (leaderboardOnlyMode) {
       leaderboardOnlyMode = false;
-      if (FM.ui && typeof FM.ui.showEmperor === "function") FM.ui.showEmperor();
+      startGame();
     } else {
       startGame();
     }

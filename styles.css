@@ -478,6 +478,7 @@ h1{margin:18px 0 6px;color:var(--accent)}
 #end-screen.leaderboard-only #end-questions,
 #end-screen.leaderboard-only #end-penalty,
 #end-screen.leaderboard-only #end-total,
+#end-screen.leaderboard-only #end-time,
 #end-screen.leaderboard-only #end-avg,
 #end-screen.leaderboard-only #session-id,
 #end-screen.leaderboard-only #saved-status{

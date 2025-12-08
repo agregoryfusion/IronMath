@@ -5,7 +5,9 @@ const U = FM.utils || {};
 const SUPABASE_URL = "https://jfjlznxvofhjjlommdrd.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bSFpnR01TewY44SI8mLuLA_aX3bF3Lk";
 
-const supabase = FM.supabaseClient || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Safely create the client so a missing CDN script doesn't break the page
+const supabaseLib = window.supabase;
+const supabase = FM.supabaseClient || (supabaseLib ? supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null);
 FM.supabaseClient = supabase;
 
 const lbWrap = document.getElementById("leaderboardContainer");
@@ -51,6 +53,10 @@ function normalizeLeaderboardRow(r) {
 function renderLeaderboard(rows) {
   if (!lbBody) return;
   lbBody.innerHTML = "";
+  if (lbWrap) {
+    lbWrap.style.display = "block";
+    lbWrap.classList.add("show");
+  }
   if (!rows || rows.length === 0) {
     if (lbStatus) lbStatus.textContent = "No scores yet.";
     return;
@@ -75,7 +81,7 @@ function renderLeaderboard(rows) {
     tr.appendChild(t(row.statesCorrect ?? 0));
     tr.appendChild(t((row.totalTime ?? 0).toFixed(2)));
     const d = row.dateAdded ? new Date(row.dateAdded) : null;
-    tr.appendChild(t(d ? d.toLocaleDateString() : "—"));
+    tr.appendChild(t(d ? d.toLocaleDateString() : "?"));
     lbBody.appendChild(tr);
   });
 }
@@ -104,6 +110,11 @@ function cacheStillValid(bucket) {
 }
 
 async function loadLeaderboard(scopeFilter = "all", timeFilter = "monthly", forceRefresh = false) {
+  if (!supabase) {
+    console.error("Supabase client not available.");
+    if (lbStatus) lbStatus.textContent = "Leaderboard unavailable.";
+    return [];
+  }
   const tf = (typeof timeFilter === "string" && timeFilter.trim().toLowerCase().startsWith("all")) ? "alltime" : "monthly";
   lastLoadedTimeFilter = tf;
 
@@ -114,6 +125,10 @@ async function loadLeaderboard(scopeFilter = "all", timeFilter = "monthly", forc
     return cache;
   }
 
+  if (lbWrap) {
+    lbWrap.style.display = "block";
+    lbWrap.classList.add("show");
+  }
   if (lbStatus) lbStatus.textContent = "Loading leaderboard...";
 
   let query = supabase

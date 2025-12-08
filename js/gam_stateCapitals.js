@@ -87,10 +87,12 @@ let sessionId = null;
 let questionLog = [];
 let scopeFilter = "students";
 let timeFilter = "monthly";
+let leaderboardOnlyMode = false;
 
 function sanitizeAnswer(input) {
-  const cleaned = (input || "").replace(/[^a-zA-Z\\s\\-'.]/g, "");
-  return cleaned.trim().replace(/\\s+/g, " ");
+  // Allow letters, spaces, apostrophes, periods, and hyphens; strip everything else.
+  const cleaned = (input || "").replace(/[^a-zA-Z\s.'-]/g, "");
+  return cleaned.trim().replace(/\s+/g, " ");
 }
 
 function shuffle(array) {
@@ -135,6 +137,8 @@ function startGame() {
   sessionId = null;
   timeFilter = "monthly";
   scopeFilter = "students";
+  leaderboardOnlyMode = false;
+  endScreen?.classList.remove("leaderboard-only");
 
   if (loadingScreen) loadingScreen.style.display = "none";
   if (emperorScreen) emperorScreen.style.display = "none";
@@ -202,6 +206,7 @@ function finishGame() {
   const totalTimeSec = (performance.now() - startTime) / 1000;
   if (gameContainer) gameContainer.style.display = "none";
   if (endScreen) endScreen.style.display = "block";
+  if (restartBtn) restartBtn.textContent = "Play Again";
   if (endQuestions) endQuestions.textContent = `States correct: ${correctCount} / ${pool.length}`;
   if (endTime) endTime.textContent = `Total time: ${totalTimeSec.toFixed(2)} s`;
   savedStatus.textContent = "Saving...";
@@ -256,7 +261,18 @@ function showLeaderboardOnly() {
   if (loadingScreen) loadingScreen.style.display = "none";
   if (emperorScreen) emperorScreen.style.display = "none";
   if (gameContainer) gameContainer.style.display = "none";
-  if (endScreen) endScreen.style.display = "block";
+  if (endScreen) {
+    endScreen.classList.add("leaderboard-only");
+    endScreen.style.display = "block";
+  }
+
+  leaderboardOnlyMode = true;
+  if (restartBtn) restartBtn.textContent = "Play";
+  scopeFilter = "all";
+  viewAllBtn?.classList.add("active");
+  viewStudentsBtn?.classList.remove("active");
+  viewTeachersBtn?.classList.remove("active");
+
   backend.loadLeaderboard(scopeFilter, timeFilter, true);
 }
 
@@ -287,7 +303,10 @@ function bindEvents() {
     });
   }
   if (restartBtn) restartBtn.addEventListener("click", () => {
-    if (FM.ui && typeof FM.ui.showEmperor === "function") {
+    if (leaderboardOnlyMode) {
+      leaderboardOnlyMode = false;
+      startGame();
+    } else if (FM.ui && typeof FM.ui.showEmperor === "function") {
       FM.ui.showEmperor();
     }
   });
