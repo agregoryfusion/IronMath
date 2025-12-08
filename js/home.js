@@ -21,6 +21,9 @@ const userNameEl = document.getElementById("userName");
 const userEmailEl = document.getElementById("userEmail");
 const signOutBtn = document.getElementById("signOutBtn");
 const placeholderCard = document.querySelector(".app-card.placeholder");
+const filterButtons = Array.from(document.querySelectorAll(".filter-pill"));
+const appCards = Array.from(document.querySelectorAll(".app-card[data-field]"));
+let activeField = null;
 
 // Konami code easter egg to replace the "Coming Soon?" text with an image
 const KONAMI_SEQUENCE = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
@@ -87,6 +90,30 @@ function showLogin(message = "") {
   if (loginStatus) loginStatus.textContent = message;
 }
 
+function applyFilter(field) {
+  appCards.forEach((card) => {
+    const cardField = (card.dataset.field || "").toLowerCase();
+    if (!field || cardField === field.toLowerCase()) {
+      card.style.display = "flex";
+    } else {
+      card.style.display = "none";
+    }
+  });
+}
+
+function bindFilters() {
+  filterButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const field = btn.dataset.field || "";
+      const isAlreadyActive = activeField && activeField.toLowerCase() === field.toLowerCase();
+      activeField = isAlreadyActive ? null : field;
+
+      filterButtons.forEach((b) => b.classList.toggle("active", b === btn && !isAlreadyActive));
+      applyFilter(activeField);
+    });
+  });
+}
+
 onAuthStateChanged(auth, (user) => {
   if (user) {
     showHome(user);
@@ -119,3 +146,6 @@ if (signOutBtn) {
     }
   });
 }
+
+// set up category filters immediately
+bindFilters();

@@ -35,21 +35,12 @@
   </div>
 
   <div id="game-container">
-    <div class="panel">
-      <div class="flex-row" style="justify-content: space-between; align-items: center; gap: 12px;">
-        <div>
-          <p class="eyebrow">State</p>
-          <div id="question" class="big-question">...</div>
-        </div>
-        <div>
-          <p class="eyebrow">Elapsed</p>
-          <div id="timerDisplay" class="eyebrow" style="font-size: 18px;">0.0s</div>
-        </div>
-      </div>
-      <div class="input-row">
+    <div class="panel game-panel">
+      <p class="eyebrow">State</p>
+      <div id="question" class="big-question">...</div>
+      <div class="input-stack">
         <input id="answer" type="text" autocomplete="off" placeholder="Capital" />
-        <button id="submitBtn">Submit</button>
-        <button id="skipBtn" class="ghost-btn">I Don't Know</button>
+        <button id="actionBtn" class="primary-btn">Skip</button>
       </div>
       <p id="feedback" class="muted"></p>
       <div class="muted" id="progress"></div>

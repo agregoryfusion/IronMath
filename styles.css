@@ -49,6 +49,32 @@ h1{margin:18px 0 6px;color:var(--accent)}
   font-weight:600;
 }
 .pill-ghost{background:rgba(255,255,255,0.02);border:1px solid #2c333f;}
+.category-filters{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.filter-pill{
+  padding:8px 14px;
+  border-radius:999px;
+  border:1px solid #2a4d7a;
+  background:#162033;
+  color:var(--accent);
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.filter-pill:hover{
+  border-color:var(--accent);
+  color:#fff;
+}
+.filter-pill.active{
+  background:linear-gradient(90deg, var(--accent), var(--accent2));
+  color:#fff;
+  border-color:transparent;
+  box-shadow:0 0 12px rgba(30,144,255,0.45);
+}
 .panel{
   background:var(--panel);
   border:1px solid #202631;
@@ -349,8 +375,8 @@ h1{margin:18px 0 6px;color:var(--accent)}
 #question{
   font-size:48px;
   font-weight:700;
-  margin-top:80px;
-  margin-bottom:30px;
+  margin-top:40px;
+  margin-bottom:24px;
   min-height:1.2em;
   transition:transform .05s
 }
@@ -369,11 +395,11 @@ h1{margin:18px 0 6px;color:var(--accent)}
   width:100%
 }
 #answer{
-  font-size:32px;
-  padding:10px;
+  font-size:34px;
+  padding:12px 14px;
   border-radius:10px;
   border:2px solid var(--accent);
-  width:140px;
+  width:clamp(240px, 50vw, 420px);
   background:var(--input);
   color:#fff;
   text-align:center;
@@ -385,6 +411,35 @@ h1{margin:18px 0 6px;color:var(--accent)}
   border-color:var(--accent2);
   box-shadow:0 0 15px #00bfff55
 }
+#game-container .game-panel{
+  max-width:640px;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+}
+.input-stack{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  width:100%;
+}
+.primary-btn{
+  background:linear-gradient(90deg, var(--accent), var(--accent2));
+  color:#fff;
+  border:none;
+  padding:12px 26px;
+  border-radius:12px;
+  font-size:18px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 0 15px rgba(30,144,255,0.35);
+  transition:filter .15s ease, transform .1s ease;
+}
+.primary-btn:hover{filter:brightness(1.06);}
+.primary-btn:active{transform:translateY(1px);}
 #stage-info{
   display:none;
 }

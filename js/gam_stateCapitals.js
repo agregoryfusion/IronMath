@@ -6,9 +6,7 @@ const questionEl = document.getElementById("question");
 const answerInput = document.getElementById("answer");
 const feedbackEl = document.getElementById("feedback");
 const progressEl = document.getElementById("progress");
-const timerDisplay = document.getElementById("timerDisplay");
-const submitBtn = document.getElementById("submitBtn");
-const skipBtn = document.getElementById("skipBtn");
+const actionBtn = document.getElementById("actionBtn");
 
 const loadingScreen = document.getElementById("loading-screen");
 const emperorScreen = document.getElementById("emperor-screen");
@@ -84,12 +82,16 @@ let pool = [];
 let currentIndex = 0;
 let startTime = null;
 let questionStartTime = null;
-let timerInterval = null;
 let correctCount = 0;
 let sessionId = null;
 let questionLog = [];
 let scopeFilter = "students";
 let timeFilter = "monthly";
+
+function sanitizeAnswer(input) {
+  const cleaned = (input || "").replace(/[^a-zA-Z\\s\\-'.]/g, "");
+  return cleaned.trim().replace(/\\s+/g, " ");
+}
 
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -120,24 +122,7 @@ function showQuestion() {
   setFeedback("", true);
   questionStartTime = performance.now();
   updateProgress();
-}
-
-function updateTimer() {
-  if (!timerDisplay || startTime === null) return;
-  const elapsed = (performance.now() - startTime) / 1000;
-  timerDisplay.textContent = `${elapsed.toFixed(1)}s`;
-}
-
-function startTimer() {
-  stopTimer();
-  timerInterval = setInterval(updateTimer, 100);
-}
-
-function stopTimer() {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
+  updateActionLabel();
 }
 
 function startGame() {
@@ -156,7 +141,6 @@ function startGame() {
   if (endScreen) endScreen.style.display = "none";
   if (gameContainer) gameContainer.style.display = "block";
 
-  startTimer();
   showQuestion();
 }
 
@@ -215,7 +199,6 @@ async function saveResults(totalTimeSec) {
 }
 
 function finishGame() {
-  stopTimer();
   const totalTimeSec = (performance.now() - startTime) / 1000;
   if (gameContainer) gameContainer.style.display = "none";
   if (endScreen) endScreen.style.display = "block";
@@ -233,17 +216,19 @@ function recordAnswer(answer, skipped = false) {
   const entry = pool[currentIndex];
   if (!entry) return;
   const elapsed = (performance.now() - questionStartTime) / 1000;
-  const normalizedAnswer = (answer || "").trim();
-  const correct = !skipped && normalizedAnswer.toLowerCase() === entry.capital.toLowerCase();
+  const sanitizedAnswer = sanitizeAnswer(answer);
+  const normalizedCapital = sanitizeAnswer(entry.capital);
+  const isSkip = skipped || !sanitizedAnswer;
+  const correct = !isSkip && sanitizedAnswer.toLowerCase() === normalizedCapital.toLowerCase();
 
   if (correct) correctCount += 1;
 
   questionLog.push({
     state: entry.state,
     capital: entry.capital,
-    answer: skipped ? "SKIP" : normalizedAnswer || "",
+    answer: isSkip ? "SKIP" : sanitizedAnswer,
     correct,
-    skipped,
+    skipped: isSkip,
     timeTaken: elapsed
   });
 
@@ -258,8 +243,9 @@ function recordAnswer(answer, skipped = false) {
 }
 
 function handleSubmit() {
+  const trimmed = (answerInput?.value || "").trim();
   if (!answerInput) return;
-  recordAnswer(answerInput.value, false);
+  recordAnswer(trimmed, false);
 }
 
 function handleSkip() {
@@ -274,14 +260,29 @@ function showLeaderboardOnly() {
   backend.loadLeaderboard(scopeFilter, timeFilter, true);
 }
 
+function updateActionLabel() {
+  if (!actionBtn || !answerInput) return;
+  const hasText = answerInput.value.trim().length > 0;
+  actionBtn.textContent = hasText ? "Submit" : "Skip";
+}
+
+function handleAction() {
+  const value = (answerInput?.value || "").trim();
+  if (!value) {
+    handleSkip();
+  } else {
+    handleSubmit();
+  }
+}
+
 function bindEvents() {
-  if (submitBtn) submitBtn.addEventListener("click", handleSubmit);
-  if (skipBtn) skipBtn.addEventListener("click", handleSkip);
+  if (actionBtn) actionBtn.addEventListener("click", handleAction);
   if (answerInput) {
+    answerInput.addEventListener("input", updateActionLabel);
     answerInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        handleSubmit();
+        handleAction();
       }
     });
   }
