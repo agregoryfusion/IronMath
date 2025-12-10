@@ -6,6 +6,7 @@
   <title>Competetive Learning</title>
 
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -34,14 +35,27 @@
     </div>
 
     <!-- Home / launcher -->
-    <!-- <section id="home-screen" class="home-screen">
+    <section id="home-screen" class="home-screen">
       <div class="user-card panel">
-        <p class="eyebrow">Signed in</p>
-        <h3 id="userName">Player</h3>
-        <p id="userEmail" class="muted"></p>
-        <button id="signOutBtn" class="ghost">Sign out</button>
-      </div> -->
-
+        <div class="user-card-left">
+          <p class="eyebrow">Signed in</p>
+          <h3 id="userNameCard">Player</h3>
+          <p id="userEmail" class="muted"></p>
+        </div>
+        <div class="user-card-right">
+          <p class="eyebrow">Unique login days</p>
+          <div class="unique-days-row">
+            <span id="uniqueDaysValue" class="unique-days-value">--</span>
+            <div class="unique-days-meta">
+              <span id="uniqueDaysRange" class="muted small"></span>
+              <span id="uniqueDaysStatus" class="muted small"></span>
+            </div>
+          </div>
+          <div class="user-card-actions">
+            <button id="openLoginLeaderboardBtn" class="primary-btn small">Login Leaderboard</button>
+          </div>
+        </div>
+      </div>
       <div class="app-grid">
         <div class="app-card" data-field="Math">
           <div class="app-card-heading">
@@ -75,6 +89,44 @@
             <a class="primary" href="statecapitals.html">Launch</a>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section id="login-leaderboard" class="panel login-leaderboard">
+      <div class="lb-top">
+        <div>
+          <p class="eyebrow">Login Activity</p>
+          <h3>Unique Days Leaderboard</h3>
+        </div>
+        <button id="loginLbBackBtn" class="ghost-btn">Back</button>
+      </div>
+
+      <div class="lb-controls">
+        <div id="loginLbTimeButtons" class="lb-button-group">
+          <button id="loginLbMonthlyBtn" class="active">Monthly</button>
+          <button id="loginLbAllTimeBtn">All-Time</button>
+        </div>
+        <div id="loginLbScopeButtons" class="lb-button-group">
+          <button id="loginLbEveryoneBtn" class="active">Everyone</button>
+          <button id="loginLbStudentsBtn">Students</button>
+          <button id="loginLbTeachersBtn">Teachers</button>
+        </div>
+      </div>
+
+      <p id="loginLeaderboardStatus" class="muted"></p>
+      <div class="leaderboard-table-wrap">
+        <table id="loginLeaderboardTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Username</th>
+              <th>Unique Days</th>
+              <th>First Login</th>
+              <th>Most Recent</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </section>
   </div>

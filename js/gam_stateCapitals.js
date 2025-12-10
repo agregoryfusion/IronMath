@@ -80,7 +80,6 @@ const STATES = [
 ];
 
 let pool = [];
-let currentIndex = 0;
 let startTime = null;
 let questionStartTime = null;
 let correctCount = 0;
@@ -90,6 +89,9 @@ let scopeFilter = "students";
 let timeFilter = "monthly";
 let leaderboardOnlyMode = false;
 let gameActive = false;
+let currentQuestion = null;
+let totalQuestions = 0;
+let questionsAsked = 0;
 
 function sanitizeAnswer(input) {
   // Allow letters, spaces, apostrophes, periods, and hyphens; strip everything else.
@@ -114,13 +116,18 @@ function setFeedback(text, success = false) {
 
 function updateProgress() {
   if (!progressEl) return;
-  progressEl.textContent = `${currentIndex + 1} / ${pool.length} states`;
+  const total = totalQuestions || STATES.length;
+  progressEl.textContent = `${questionsAsked} / ${total} states`;
 }
 
 function showQuestion() {
-  const entry = pool[currentIndex];
-  if (!entry) return;
-  questionEl.textContent = entry.state;
+  currentQuestion = pool.shift();
+  if (!currentQuestion) {
+    finishGame();
+    return;
+  }
+  questionsAsked = (totalQuestions - pool.length);
+  questionEl.textContent = currentQuestion.state;
   answerInput.value = "";
   answerInput.focus();
   setFeedback("", true);
@@ -131,7 +138,9 @@ function showQuestion() {
 
 function startGame() {
   pool = shuffle([...STATES]);
-  currentIndex = 0;
+  totalQuestions = pool.length;
+  questionsAsked = 0;
+  currentQuestion = null;
   startTime = performance.now();
   questionStartTime = performance.now();
   correctCount = 0;
@@ -213,8 +222,8 @@ function finishGame(options = {}) {
   if (endScreen) endScreen.style.display = "block";
   if (restartBtn) restartBtn.textContent = "Play Again";
   const answeredCount = questionLog.length;
-  const questionsCount = options.gaveUp ? answeredCount : pool.length;
-  const displayTotal = questionsCount || pool.length;
+  const plannedTotal = totalQuestions || STATES.length;
+  const displayTotal = options.gaveUp ? answeredCount : plannedTotal;
   const stoppedLabel = options.gaveUp ? " (stopped early)" : "";
   if (endQuestions) endQuestions.textContent = `States correct: ${correctCount} / ${displayTotal}${stoppedLabel}`;
   if (endTime) endTime.textContent = `Total time: ${totalTimeSec.toFixed(2)} s`;
@@ -228,29 +237,27 @@ function finishGame(options = {}) {
 
 function recordAnswer(answer, skipped = false) {
   if (!gameActive) return;
-  const entry = pool[currentIndex];
-  if (!entry) return;
+  if (!currentQuestion) return;
   const elapsed = (performance.now() - questionStartTime) / 1000;
   const sanitizedAnswer = sanitizeAnswer(answer);
-  const normalizedCapital = sanitizeAnswer(entry.capital);
+  const normalizedCapital = sanitizeAnswer(currentQuestion.capital);
   const isSkip = skipped || !sanitizedAnswer;
   const correct = !isSkip && sanitizedAnswer.toLowerCase() === normalizedCapital.toLowerCase();
 
   if (correct) correctCount += 1;
 
   questionLog.push({
-    state: entry.state,
-    capital: entry.capital,
+    state: currentQuestion.state,
+    capital: currentQuestion.capital,
     answer: isSkip ? "SKIP" : sanitizedAnswer,
     correct,
     skipped: isSkip,
     timeTaken: elapsed
   });
 
-  setFeedback(correct ? "Correct!" : `Incorrect. Capital is ${entry.capital}.`, correct);
+  setFeedback(correct ? "Correct!" : `Incorrect. Capital is ${currentQuestion.capital}.`, correct);
 
-  currentIndex += 1;
-  if (currentIndex >= pool.length) {
+  if (pool.length === 0) {
     finishGame();
   } else {
     showQuestion();

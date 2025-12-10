@@ -89,8 +89,54 @@ h1{margin:18px 0 6px;color:var(--accent)}
   flex-wrap:wrap;
   opacity:0;
   transition:opacity .2s ease;
+  flex-direction:column;
 }
-.user-card{min-width:260px;max-width:320px;}
+.user-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:18px;
+  width:100%;
+  max-width:1100px;
+  flex-wrap:wrap;
+}
+.user-card-left{
+  min-width:220px;
+}
+.user-card-right{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:center;
+  text-align:center;
+  margin-left:auto;
+}
+.unique-days-row{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+.unique-days-value{
+  font-size:40px;
+  font-weight:800;
+  color:#ffb347;
+}
+.unique-days-meta{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.user-card-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.primary-btn.small{
+  padding:10px 18px;
+  font-size:15px;
+}
 .muted{color:var(--muted);}
 .home-screen .muted{margin-top:2px;}
 .app-grid{
@@ -574,6 +620,66 @@ h1{margin:18px 0 6px;color:var(--accent)}
   transform: scale(1.05);
 }
 
+.login-leaderboard{
+  display:none;
+  margin-top:22px;
+}
+.lb-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.lb-controls{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:14px 0;
+}
+.lb-button-group{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.lb-button-group button{
+  background:var(--accent);
+  border:none;
+  color:#fff;
+  padding:8px 16px;
+  border-radius:10px;
+  font-size:14px;
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+.lb-button-group button.active{
+  background:var(--accent2);
+  box-shadow:0 0 12px var(--accent2);
+  transform:scale(1.05);
+}
+.leaderboard-table-wrap{
+  margin-top:10px;
+  overflow-x:auto;
+}
+#loginLeaderboardTable{
+  width:100%;
+  border-collapse:collapse;
+}
+#loginLeaderboardTable th,
+#loginLeaderboardTable td{
+  padding:10px;
+  border-bottom:1px solid #2a2f37;
+  text-align:center;
+}
+#loginLeaderboardTable th{
+  color:var(--accent);
+  font-weight:600;
+  border-bottom:2px solid #1e90ff33;
+}
+#loginLeaderboardTable td{color:#e6e9ee;}
+#loginLeaderboardTable tr:hover td{background:#1e90ff22;}
+
 /* User's own row highlight (easy to tweak) */
 :root{
   --leaderboard-self-bg: linear-gradient(90deg, #fff8c6, #fff3a8); /* yellow-ish */
@@ -582,7 +688,8 @@ h1{margin:18px 0 6px;color:var(--accent)}
 }
 
 /* Add a distinct style for the player's own row */
-#leaderboardContainer tr.lb-row-self td {
+#leaderboardContainer tr.lb-row-self td,
+#loginLeaderboardTable tr.lb-row-self td {
   background: var(--leaderboard-self-bg);
   color: var(--leaderboard-self-text);
   font-weight: 700;
