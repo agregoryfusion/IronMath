@@ -244,11 +244,8 @@ function finishGame(options = {}) {
   if (gameContainer) gameContainer.style.display = "none";
   if (endScreen) endScreen.style.display = "block";
   if (restartBtn) restartBtn.textContent = "Play Again";
-  const answeredCount = questionLog.length;
-  const plannedTotal = totalQuestions || answeredCount;
-  const displayTotal = options.skippedContinent ? answeredCount : plannedTotal;
-  const stoppedLabel = options.skippedContinent ? " (some continents skipped)" : "";
-  if (endQuestions) endQuestions.textContent = `Countries correct: ${correctCount} / ${displayTotal}${stoppedLabel}`;
+  const plannedTotal = totalQuestions || questionLog.length;
+  if (endQuestions) endQuestions.textContent = `Countries correct: ${correctCount} / ${plannedTotal}`;
   if (endTime) endTime.textContent = `Total time: ${totalTimeSec.toFixed(2)} s`;
   savedStatus.textContent = "Saving...";
   savedStatus.classList.remove("success", "error");
@@ -305,12 +302,21 @@ function handleSkip() {
 function skipContinent() {
   if (!gameActive || !currentQuestion) return;
   const cont = continentOrder[currentContinentIdx];
-  const remainingAfterCurrent = Math.max(0, cont.countries.length - currentCountryIdx - 1);
+  const remainingIncludingCurrent = Math.max(0, cont.countries.length - currentCountryIdx);
+
+  // Log current question as skipped (counts as 1)
   recordAnswer("SKIP", true);
-  totalQuestions = Math.max(askedCount, totalQuestions - remainingAfterCurrent);
+
+  // Jump progress by the rest of the continent (already skipped virtually)
+  const extraSkipped = Math.max(0, remainingIncludingCurrent - 1);
+  askedCount = Math.min(totalQuestions, askedCount + extraSkipped);
+
+  // Advance to next continent
   currentContinentIdx += 1;
   currentCountryIdx = 0;
-  if (!nextAvailableQuestion()) return finishGame({ skippedContinent: true });
+
+  // If nothing left, finish; otherwise continue
+  if (!nextAvailableQuestion()) return finishGame();
   showQuestion();
 }
 
