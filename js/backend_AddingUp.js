@@ -177,6 +177,18 @@ function getEmperorTopStudent() {
   return list.find(r => r.isStudent) || list[0];
 }
 
+function getTopByRole(role = "student") {
+  const list = lastLoadedTimeFilter === "alltime" ? cachedAllTimeLeaderboard : cachedMonthlyLeaderboard;
+  if (!list || list.length === 0) return null;
+  if (role === "teacher") {
+    const t = list.find(r => r.isTeacher);
+    if (t) return t;
+  }
+  const s = list.find(r => r.isStudent);
+  if (s) return s;
+  return list[0] || null;
+}
+
 async function insertLeaderboardRow(payload) {
   return await supabase.from(TABLES.leaderboard).insert(payload).select().maybeSingle();
 }
@@ -229,6 +241,7 @@ FM.backendAddingUp = {
   supabase,
   loadLeaderboard,
   getEmperorTopStudent,
+  getTopByRole,
   safeUserId,
   insertLeaderboardRow,
   insertSessionRow,

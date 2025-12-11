@@ -416,6 +416,18 @@ function getEmperorTopStudent() {
   return top || null;
 }
 
+function getTopByRole(role = "student") {
+  const list = lastLoadedTimeFilter === "alltime" ? cachedAllTimeLeaderboard : cachedMonthlyLeaderboard || cachedEmperorData;
+  if (!list || list.length === 0) return null;
+  if (role === "teacher") {
+    const t = list.find(d => d.isTeacher === true);
+    if (t) return t;
+  }
+  const s = list.find(d => d.isStudent === true);
+  if (s) return s;
+  return list[0] || null;
+}
+
 async function insertSessionRow(sessionObj) {
   try {
     // Insert and return the created session row (select().single() like users insert)
@@ -502,6 +514,7 @@ FM.backendTimesTable = {
   loadLeaderboard,
   toggleLeaderboard,
   getEmperorTopStudent,
+  getTopByRole,
   insertSessionRow,
   insertQuestionRows,
   insertLeaderboardRow

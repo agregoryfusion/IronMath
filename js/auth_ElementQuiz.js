@@ -92,10 +92,14 @@ async function handleSignedIn(user) {
 }
 
 function showEmperor() {
-  const top = backend.getEmperorTopStudent();
-  if (top) {
-    const total = (top.symbolsCorrect ?? 0) + (top.numbersCorrect ?? 0);
-    emperorName.textContent = top.playerName;
+  const auth = FM.auth || {};
+  const role = auth.isTeacher ? "teacher" : "student";
+  const top = backend.getTopByRole ? backend.getTopByRole(role) : backend.getEmperorTopStudent();
+  const fallback = (!top && backend.getTopByRole) ? backend.getTopByRole("student") : top;
+  const target = fallback || top;
+  if (target) {
+    const total = (target.symbolsCorrect ?? 0) + (target.numbersCorrect ?? 0);
+    emperorName.textContent = target.playerName;
     emperorScore.textContent = `${total} / 236`;
   } else {
     emperorName.textContent = "...";

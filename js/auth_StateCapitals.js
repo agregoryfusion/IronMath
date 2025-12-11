@@ -91,10 +91,14 @@ async function handleSignedIn(user) {
 }
 
 function showEmperor() {
-  const top = backend.getEmperorTopStudent();
-  if (top) {
-    emperorName.textContent = top.playerName;
-    emperorScore.textContent = `${top.statesCorrect} States Correct`;
+  const auth = FM.auth || {};
+  const role = auth.isTeacher ? "teacher" : "student";
+  const top = backend.getTopByRole ? backend.getTopByRole(role) : backend.getEmperorTopStudent();
+  const fallback = (!top && backend.getTopByRole) ? backend.getTopByRole("student") : top;
+  const target = fallback || top;
+  if (target) {
+    emperorName.textContent = target.playerName;
+    emperorScore.textContent = `${target.statesCorrect} States Correct`;
   } else {
     emperorName.textContent = "...";
     emperorScore.textContent = "...";
