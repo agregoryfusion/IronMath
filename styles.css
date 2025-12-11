@@ -749,10 +749,12 @@ h1{margin:18px 0 6px;color:var(--accent)}
   padding:8px 10px;
   border-bottom:1px solid #2a2f37;
   text-align:left;
+  white-space:pre-line;
 }
 .answers-container th{
   color:var(--accent);
   border-bottom:2px solid #1e90ff33;
 }
 .answer-correct td{color:#7fdca2;}
+.answer-partial td{color:#ffd27a;}
 .answer-wrong td{color:#ff8a8a;}

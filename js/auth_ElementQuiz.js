@@ -1,14 +1,14 @@
-// auth_WorldCapitals.js - entry point for World Capitals game
+// auth_ElementQuiz.js - entry point for Periodic Sprint game
 import "./utils.js";
 import "./backend_main.js";
-import "./data_worldCapitals.js";
-import "./backend_WorldCapitals.js";
-import "./gam_worldCapitals.js";
+import "./data_elements.js";
+import "./backend_ElementQuiz.js";
+import "./gam_elementQuiz.js";
 
 const FM = (window.FastMath = window.FastMath || {});
 const U = FM.utils;
 const backendMain = FM.backendMain || {};
-const backend = FM.backendWorldCapitals || {};
+const backend = FM.backendElementQuiz || {};
 
 const loadingScreen = document.getElementById("loading-screen");
 const emperorScreen = document.getElementById("emperor-screen");
@@ -94,8 +94,9 @@ async function handleSignedIn(user) {
 function showEmperor() {
   const top = backend.getEmperorTopStudent();
   if (top) {
+    const total = (top.symbolsCorrect ?? 0) + (top.numbersCorrect ?? 0);
     emperorName.textContent = top.playerName;
-    emperorScore.textContent = `${top.countriesCorrect} Countries Correct`;
+    emperorScore.textContent = `${total} / 236`;
   } else {
     emperorName.textContent = "...";
     emperorScore.textContent = "...";
@@ -121,9 +122,9 @@ onAuthStateChanged(auth, async (user) => {
 
 if (playBtn) {
   playBtn.addEventListener("click", () => {
-    emperorScreen.style.display = "none";
-    if (FM.worldCapitalsGame && typeof FM.worldCapitalsGame.startGame === "function") {
-      FM.worldCapitalsGame.startGame();
+    if (emperorScreen) emperorScreen.style.display = "none";
+    if (FM.elementQuizGame && typeof FM.elementQuizGame.startGame === "function") {
+      FM.elementQuizGame.startGame();
     }
   });
 }
@@ -132,8 +133,8 @@ if (leaderboardBtn) {
   leaderboardBtn.addEventListener("click", () => {
     if (loadingScreen) loadingScreen.style.display = "none";
     if (emperorScreen) emperorScreen.style.display = "none";
-    if (FM.worldCapitalsGame && typeof FM.worldCapitalsGame.showLeaderboardOnly === "function") {
-      FM.worldCapitalsGame.showLeaderboardOnly();
+    if (FM.elementQuizGame && typeof FM.elementQuizGame.showLeaderboardOnly === "function") {
+      FM.elementQuizGame.showLeaderboardOnly();
     }
   });
 }

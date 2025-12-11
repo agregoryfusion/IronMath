@@ -30,7 +30,7 @@ const viewAllBtn = document.getElementById("viewAllBtn");
 const viewStudentsBtn = document.getElementById("viewStudentsBtn");
 const viewTeachersBtn = document.getElementById("viewTeachersBtn");
 
-let dataset = [];
+const DATASET = (window.FastMath && window.FastMath.worldCapitalsData) ? window.FastMath.worldCapitalsData : [];
 let continentOrder = [];
 let currentContinentIdx = 0;
 let currentCountryIdx = 0;
@@ -63,24 +63,8 @@ function shuffle(array) {
 }
 
 async function loadCsv() {
-  if (dataset.length > 0) return dataset;
-  const res = await fetch("countries_capitals_continents.csv");
-  const text = await res.text();
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  const rows = lines.slice(1); // skip header
-  const byContinent = {};
-  rows.forEach((line) => {
-    const parts = line.split(",");
-    if (parts.length < 3) return;
-    const country = parts[0].trim();
-    const capital = parts[1].trim();
-    const cont = parts[2].trim();
-    if (!country || !capital || !cont) return;
-    if (!byContinent[cont]) byContinent[cont] = [];
-    byContinent[cont].push({ country, capital, continent: cont });
-  });
-  dataset = Object.entries(byContinent).map(([name, list]) => ({ name, countries: list }));
-  return dataset;
+  // Deprecated: inline data now provided via data_worldCapitals.js
+  return DATASET;
 }
 
 function setFeedback(text, success = false) {
@@ -105,9 +89,19 @@ function updateActionLabel() {
 }
 
 function buildOrder() {
-  const conts = dataset.map((c) => ({
-    name: c.name,
-    countries: shuffle([...c.countries])
+  const byContinent = {};
+  (DATASET || []).forEach((row) => {
+    if (!row.continent || !row.country || !row.capital) return;
+    if (!byContinent[row.continent]) byContinent[row.continent] = [];
+    byContinent[row.continent].push({
+      continent: row.continent,
+      country: row.country,
+      capitalRaw: row.capital
+    });
+  });
+  const conts = Object.entries(byContinent).map(([name, list]) => ({
+    name,
+    countries: shuffle(list)
   }));
   continentOrder = shuffle(conts);
   totalQuestions = continentOrder.reduce((sum, c) => sum + c.countries.length, 0);
@@ -156,35 +150,33 @@ function remainingQuestions() {
 }
 
 function startGame() {
-  loadCsv()
-    .then(() => {
-      buildOrder();
-      questionsAsked = 0;
-      currentQuestion = null;
-      startTime = performance.now();
-      questionStartTime = performance.now();
-      correctCount = 0;
-      questionLog = [];
-      sessionId = null;
-      timeFilter = "monthly";
-      scopeFilter = "students";
-      leaderboardOnlyMode = false;
-      gameActive = true;
-      askedCount = 0;
-      answersVisible = false;
-      endScreen?.classList.remove("leaderboard-only");
+  buildOrder();
+  questionsAsked = 0;
+  currentQuestion = null;
+  startTime = performance.now();
+  questionStartTime = performance.now();
+  correctCount = 0;
+  questionLog = [];
+  sessionId = null;
+  timeFilter = "monthly";
+  scopeFilter = "students";
+  leaderboardOnlyMode = false;
+  gameActive = true;
+  askedCount = 0;
+  answersVisible = false;
+  endScreen?.classList.remove("leaderboard-only");
 
-      if (loadingScreen) loadingScreen.style.display = "none";
-      if (emperorScreen) emperorScreen.style.display = "none";
-      if (endScreen) endScreen.style.display = "none";
-      if (gameContainer) gameContainer.style.display = "block";
+  if (loadingScreen) loadingScreen.style.display = "none";
+  if (emperorScreen) emperorScreen.style.display = "none";
+  if (endScreen) endScreen.style.display = "none";
+  if (gameContainer) gameContainer.style.display = "block";
+  if (answersContainer) answersContainer.style.display = "none";
+  if (showAnswersBtn) {
+    showAnswersBtn.textContent = "Show Answers";
+    showAnswersBtn.classList.remove("active");
+  }
 
-      showQuestion();
-    })
-    .catch((err) => {
-      console.error("Failed to load countries CSV", err);
-      setFeedback("Could not load countries list.", false);
-    });
+  showQuestion();
 }
 
 async function saveResults(totalTimeSec) {
@@ -280,15 +272,15 @@ function recordAnswer(answer, skipped = false) {
   if (!currentQuestion) return;
   const elapsed = (performance.now() - questionStartTime) / 1000;
   const sanitizedAnswer = sanitizeAnswer(answer);
-  const normalizedCapital = sanitizeAnswer(currentQuestion.capital);
+  const accepted = (currentQuestion.capitalRaw || "").split("|").map((c) => sanitizeAnswer(c)).filter(Boolean);
   const isSkip = skipped || !sanitizedAnswer;
-  const correct = !isSkip && sanitizedAnswer.toLowerCase() === normalizedCapital.toLowerCase();
+  const correct = !isSkip && accepted.some((c) => sanitizedAnswer.toLowerCase() === c.toLowerCase());
 
   if (correct) correctCount += 1;
 
   questionLog.push({
     country: currentQuestion.country,
-    capital: currentQuestion.capital,
+    capital: (currentQuestion.capitalRaw || "").split("|").map((p) => p.trim()).filter(Boolean).join(" or\n"),
     continent: currentQuestion.continent,
     answer: isSkip ? "SKIP" : sanitizedAnswer,
     correct,
@@ -298,7 +290,8 @@ function recordAnswer(answer, skipped = false) {
 
   askedCount += 1;
 
-  setFeedback(correct ? "Correct!" : isSkip ? "Skipped." : `Incorrect. Capital is ${currentQuestion.capital}.`, correct);
+  const displayCap = (currentQuestion.capitalRaw || "").split("|").map((p) => p.trim()).filter(Boolean).join(" or ");
+  setFeedback(correct ? "Correct!" : isSkip ? "Skipped." : `Incorrect. Capital is ${displayCap}.`, correct);
 
   currentCountryIdx += 1;
   if (currentCountryIdx >= continentOrder[currentContinentIdx].countries.length) {

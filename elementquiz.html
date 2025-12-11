@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Periodic Sprint</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="game-topbar">
+    <a class="back-link" href="index.html">← Apps</a>
+    <span class="pill pill-ghost" id="version"></span>
+  </div>
+
+  <h1>Periodic Sprint</h1>
+
+  <div id="loading-screen">
+    <div class="loader"></div>
+    <p class="muted">Loading Elements</p>
+  </div>
+
+  <div id="emperor-screen">
+    <h2 class="emp-line">The Monthly Chemist</h2>
+    <h2 class="emp-line">Of Periodic Sprint Is:</h2>
+    <h1 id="emperorName" class="emp-name">...</h1>
+
+    <h2 class="emp-line">With A Score Of:</h2>
+    <h1 id="emperorScore" class="emp-score">...</h1>
+
+    <div class="emp-buttons">
+      <button id="playBtn">Play</button>
+      <button id="viewLeaderboardBtn" class="ghost-btn">View Leaderboard</button>
+    </div>
+  </div>
+
+  <div id="game-container">
+    <div class="panel game-panel">
+      <p class="eyebrow">Element</p>
+      <div id="question" class="big-question">...</div>
+      <div class="input-stack">
+        <input id="answerSymbol" type="text" autocomplete="off" placeholder="Abbreviation (e.g. He)" />
+        <input id="answerNumber" type="text" autocomplete="off" placeholder="Atomic Number (e.g. 2)" inputmode="numeric" />
+        <button id="actionBtn" class="primary-btn">Skip</button>
+      </div>
+      <p id="feedback" class="muted"></p>
+      <div class="muted" id="progress"></div>
+      <button id="giveUpBtn" class="danger-btn" type="button">I Give Up</button>
+    </div>
+  </div>
+
+  <div id="end-screen">
+    <h3>All Elements Asked!</h3>
+    <p id="end-questions">Symbols correct: ...</p>
+    <p id="end-time">Total time: ... s</p>
+    <p id="session-id"></p>
+    <p id="saved-status"></p>
+
+    <button id="restartBtn">Play Again</button>
+    <div class="answers-toggle-wrap">
+      <button id="showAnswersBtn" class="ghost-btn answers-toggle" type="button">Show Answers</button>
+    </div>
+
+    <div id="answersContainer" class="answers-container">
+      <table id="answersTable">
+        <thead>
+          <tr>
+            <th>Element</th>
+            <th>Symbol</th>
+            <th>Atomic #</th>
+            <th>Your Symbol</th>
+            <th>Your Atomic #</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="leaderboardTimeButtons">
+      <button id="lbMonthlyBtn" class="active">Monthly</button>
+      <button id="lbAllTimeBtn">All-Time</button>
+    </div>
+
+    <div id="leaderboardButtons">
+      <button id="viewAllBtn">Everyone</button>
+      <button id="viewStudentsBtn">Students</button>
+      <button id="viewTeachersBtn">Teachers</button>
+    </div>
+
+    <div id="leaderboardContainer">
+      <p id="leaderboardStatus"></p>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Player</th><th>Symbols Correct</th><th>Atomic # Correct</th><th>Total Points</th><th>Time (s)</th><th>Date</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module" src="js/auth_ElementQuiz.js"></script>
+</body>
+</html>

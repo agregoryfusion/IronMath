@@ -1,9 +1,10 @@
-// gam_stateCapitals.js - gameplay for the State Capitals sprint
+// gam_elementQuiz.js - gameplay for Periodic Sprint (symbols + atomic numbers)
 const FM = (window.FastMath = window.FastMath || {});
-const backend = FM.backendStateCapitals || {};
+const backend = FM.backendElementQuiz || {};
 
 const questionEl = document.getElementById("question");
-const answerInput = document.getElementById("answer");
+const answerSymbol = document.getElementById("answerSymbol");
+const answerNumber = document.getElementById("answerNumber");
 const feedbackEl = document.getElementById("feedback");
 const progressEl = document.getElementById("progress");
 const actionBtn = document.getElementById("actionBtn");
@@ -29,63 +30,13 @@ const viewAllBtn = document.getElementById("viewAllBtn");
 const viewStudentsBtn = document.getElementById("viewStudentsBtn");
 const viewTeachersBtn = document.getElementById("viewTeachersBtn");
 
-const STATES = [
-  { state: "Alabama", capital: "Montgomery" },
-  { state: "Alaska", capital: "Juneau" },
-  { state: "Arizona", capital: "Phoenix" },
-  { state: "Arkansas", capital: "Little Rock" },
-  { state: "California", capital: "Sacramento" },
-  { state: "Colorado", capital: "Denver" },
-  { state: "Connecticut", capital: "Hartford" },
-  { state: "Delaware", capital: "Dover" },
-  { state: "Florida", capital: "Tallahassee" },
-  { state: "Georgia", capital: "Atlanta" },
-  { state: "Hawaii", capital: "Honolulu" },
-  { state: "Idaho", capital: "Boise" },
-  { state: "Illinois", capital: "Springfield" },
-  { state: "Indiana", capital: "Indianapolis" },
-  { state: "Iowa", capital: "Des Moines" },
-  { state: "Kansas", capital: "Topeka" },
-  { state: "Kentucky", capital: "Frankfort" },
-  { state: "Louisiana", capital: "Baton Rouge" },
-  { state: "Maine", capital: "Augusta" },
-  { state: "Maryland", capital: "Annapolis" },
-  { state: "Massachusetts", capital: "Boston" },
-  { state: "Michigan", capital: "Lansing" },
-  { state: "Minnesota", capital: "Saint Paul|St. Paul" },
-  { state: "Mississippi", capital: "Jackson" },
-  { state: "Missouri", capital: "Jefferson City" },
-  { state: "Montana", capital: "Helena" },
-  { state: "Nebraska", capital: "Lincoln" },
-  { state: "Nevada", capital: "Carson City" },
-  { state: "New Hampshire", capital: "Concord" },
-  { state: "New Jersey", capital: "Trenton" },
-  { state: "New Mexico", capital: "Santa Fe" },
-  { state: "New York", capital: "Albany" },
-  { state: "North Carolina", capital: "Raleigh" },
-  { state: "North Dakota", capital: "Bismarck" },
-  { state: "Ohio", capital: "Columbus" },
-  { state: "Oklahoma", capital: "Oklahoma City" },
-  { state: "Oregon", capital: "Salem" },
-  { state: "Pennsylvania", capital: "Harrisburg" },
-  { state: "Rhode Island", capital: "Providence" },
-  { state: "South Carolina", capital: "Columbia" },
-  { state: "South Dakota", capital: "Pierre" },
-  { state: "Tennessee", capital: "Nashville" },
-  { state: "Texas", capital: "Austin" },
-  { state: "Utah", capital: "Salt Lake City" },
-  { state: "Vermont", capital: "Montpelier" },
-  { state: "Virginia", capital: "Richmond" },
-  { state: "Washington", capital: "Olympia" },
-  { state: "West Virginia", capital: "Charleston" },
-  { state: "Wisconsin", capital: "Madison" },
-  { state: "Wyoming", capital: "Cheyenne" }
-];
-
+const ELEMENTS_DATA = (window.FastMath && window.FastMath.elementData) ? window.FastMath.elementData : [];
+let elements = [];
 let pool = [];
 let startTime = null;
 let questionStartTime = null;
-let correctCount = 0;
+let correctSymbols = 0;
+let correctNumbers = 0;
 let sessionId = null;
 let questionLog = [];
 let scopeFilter = "students";
@@ -97,23 +48,14 @@ let totalQuestions = 0;
 let questionsAsked = 0;
 let answersVisible = false;
 
-function parseAnswerOptions(raw) {
-  return (raw || "")
-    .split("|")
-    .map((p) => sanitizeAnswer(p))
-    .filter(Boolean);
+function sanitizeSymbol(input) {
+  return (input || "").trim();
 }
 
-function formatAnswersDisplay(raw) {
-  const parts = (raw || "").split("|").map((p) => p.trim()).filter(Boolean);
-  if (!parts.length) return raw || "";
-  return parts.join(" or\n");
-}
-
-function sanitizeAnswer(input) {
-  // Allow letters, spaces, apostrophes, periods, and hyphens; strip everything else.
-  const cleaned = (input || "").replace(/[^a-zA-Z\s.'-]/g, "");
-  return cleaned.trim().replace(/\s+/g, " ");
+function sanitizeNumber(input) {
+  const trimmed = (input || "").trim();
+  const num = Number(trimmed);
+  return Number.isFinite(num) ? num : null;
 }
 
 function shuffle(array) {
@@ -124,17 +66,29 @@ function shuffle(array) {
   return array;
 }
 
-function setFeedback(text, success = false) {
+async function loadCsv() {
+  if (elements.length > 0) return elements;
+  elements = (ELEMENTS_DATA || []).filter((e) => e.element && e.symbol && Number.isFinite(e.atomicNumber));
+  return elements;
+}
+
+function setFeedback(text, tone = "") {
   if (!feedbackEl) return;
   feedbackEl.textContent = text;
   feedbackEl.classList.remove("success", "error");
-  feedbackEl.classList.add(success ? "success" : "error");
+  if (tone === "success") feedbackEl.classList.add("success");
+  if (tone === "error") feedbackEl.classList.add("error");
 }
 
 function updateProgress() {
   if (!progressEl) return;
-  const total = totalQuestions || STATES.length;
-  progressEl.textContent = `${questionsAsked} / ${total} states`;
+  const total = totalQuestions || elements.length || 118;
+  progressEl.textContent = `${questionsAsked} / ${total} elements`;
+}
+
+function updateActionLabel() {
+  const hasText = (answerSymbol?.value || "").trim().length > 0 || (answerNumber?.value || "").trim().length > 0;
+  if (actionBtn) actionBtn.textContent = hasText ? "Submit" : "Skip";
 }
 
 function showQuestion() {
@@ -143,65 +97,53 @@ function showQuestion() {
     finishGame();
     return;
   }
-  questionsAsked = (totalQuestions - pool.length);
-  questionEl.textContent = currentQuestion.state;
-  answerInput.value = "";
-  answerInput.focus();
-  setFeedback("", true);
+  questionsAsked = totalQuestions - pool.length;
+  questionEl.textContent = currentQuestion.element;
+  answerSymbol.value = "";
+  answerNumber.value = "";
+  answerSymbol.focus();
+  setFeedback("", "");
   questionStartTime = performance.now();
   updateProgress();
   updateActionLabel();
 }
 
-function renderAnswersTable() {
-  if (!answersContainer || !answersTableBody) return;
-  answersTableBody.innerHTML = "";
-  questionLog.forEach((q) => {
-    const tr = document.createElement("tr");
-    tr.classList.add(q.correct ? "answer-correct" : "answer-wrong");
-    [q.state, q.capitalDisplay || q.capital, q.answer || ""].forEach((val) => {
-      const td = document.createElement("td");
-      td.textContent = val;
-      tr.appendChild(td);
-    });
-    answersTableBody.appendChild(tr);
-  });
-  answersContainer.style.display = "block";
-  answersVisible = true;
-  if (showAnswersBtn) {
-    showAnswersBtn.textContent = "Hide Answers";
-    showAnswersBtn.classList.add("active");
-  }
-}
-
 function startGame() {
-  pool = shuffle([...STATES]);
-  totalQuestions = pool.length;
-  questionsAsked = 0;
-  currentQuestion = null;
-  startTime = performance.now();
-  questionStartTime = performance.now();
-  correctCount = 0;
-  questionLog = [];
-  sessionId = null;
-  timeFilter = "monthly";
-  scopeFilter = "students";
-  leaderboardOnlyMode = false;
-  gameActive = true;
-  answersVisible = false;
-  endScreen?.classList.remove("leaderboard-only");
+  loadCsv()
+    .then(() => {
+      pool = shuffle([...elements]);
+      totalQuestions = pool.length;
+      questionsAsked = 0;
+      currentQuestion = null;
+      startTime = performance.now();
+      questionStartTime = performance.now();
+      correctSymbols = 0;
+      correctNumbers = 0;
+      questionLog = [];
+      sessionId = null;
+      timeFilter = "monthly";
+      scopeFilter = "students";
+      leaderboardOnlyMode = false;
+      gameActive = true;
+      answersVisible = false;
+      endScreen?.classList.remove("leaderboard-only");
 
-  if (loadingScreen) loadingScreen.style.display = "none";
-  if (emperorScreen) emperorScreen.style.display = "none";
-  if (endScreen) endScreen.style.display = "none";
-  if (gameContainer) gameContainer.style.display = "block";
-  if (answersContainer) answersContainer.style.display = "none";
-  if (showAnswersBtn) {
-    showAnswersBtn.textContent = "Show Answers";
-    showAnswersBtn.classList.remove("active");
-  }
+      if (loadingScreen) loadingScreen.style.display = "none";
+      if (emperorScreen) emperorScreen.style.display = "none";
+      if (endScreen) endScreen.style.display = "none";
+      if (gameContainer) gameContainer.style.display = "block";
+      if (answersContainer) answersContainer.style.display = "none";
+      if (showAnswersBtn) {
+        showAnswersBtn.textContent = "Show Answers";
+        showAnswersBtn.classList.remove("active");
+      }
 
-  showQuestion();
+      showQuestion();
+    })
+    .catch((err) => {
+      console.error("Failed to load elements list", err);
+      setFeedback("Could not load elements list.", "error");
+    });
 }
 
 async function saveResults(totalTimeSec) {
@@ -210,7 +152,9 @@ async function saveResults(totalTimeSec) {
   const sessionPayload = {
     player_name: auth.playerName || "Player",
     user_id: userId,
-    states_correct: correctCount,
+    symbols_correct: correctSymbols,
+    atomic_numbers_correct: correctNumbers,
+    total_points: correctSymbols + correctNumbers,
     total_time_seconds: totalTimeSec,
     is_teacher: auth.isTeacher,
     is_student: auth.isStudent,
@@ -225,10 +169,13 @@ async function saveResults(totalTimeSec) {
     const rows = questionLog.map((q, idx) => ({
       session_id: sessionId,
       question_number: idx + 1,
-      state_name: q.state,
-      expected_capital: q.capital,
-      player_answer: q.answer,
-      is_correct: q.correct,
+      element_name: q.element,
+      correct_symbol: q.symbol,
+      correct_atomic_number: q.atomicNumber,
+      user_symbol: q.userSymbol,
+      user_atomic_number: q.userAtomicNumber,
+      correct_symbol_flag: q.correctSymbol,
+      correct_number_flag: q.correctNumber,
       time_taken: q.timeTaken,
       skipped: q.skipped,
       player_name: auth.playerName || "Player",
@@ -241,7 +188,9 @@ async function saveResults(totalTimeSec) {
 
     await backend.insertLeaderboardRow({
       player_name: auth.playerName || "Player",
-      states_correct: correctCount,
+      symbols_correct: correctSymbols,
+      atomic_numbers_correct: correctNumbers,
+      total_points: correctSymbols + correctNumbers,
       total_time_seconds: totalTimeSec,
       is_teacher: auth.isTeacher,
       is_student: auth.isStudent,
@@ -265,11 +214,8 @@ function finishGame(options = {}) {
   if (gameContainer) gameContainer.style.display = "none";
   if (endScreen) endScreen.style.display = "block";
   if (restartBtn) restartBtn.textContent = "Play Again";
-  const answeredCount = questionLog.length;
-  const plannedTotal = totalQuestions || STATES.length;
-  const displayTotal = options.gaveUp ? answeredCount : plannedTotal;
-  const stoppedLabel = options.gaveUp ? " (stopped early)" : "";
-  if (endQuestions) endQuestions.textContent = `States correct: ${correctCount} / ${displayTotal}${stoppedLabel}`;
+  const plannedTotal = totalQuestions || elements.length;
+  if (endQuestions) endQuestions.textContent = `Symbols: ${correctSymbols} / ${plannedTotal}, Atomic #: ${correctNumbers} / ${plannedTotal} (Total ${correctSymbols + correctNumbers} / ${plannedTotal * 2})`;
   if (endTime) endTime.textContent = `Total time: ${totalTimeSec.toFixed(2)} s`;
   savedStatus.textContent = "Saving...";
   savedStatus.classList.remove("success", "error");
@@ -281,33 +227,59 @@ function finishGame(options = {}) {
     showAnswersBtn.classList.remove("active");
   }
 
+  // Default leaderboard view: Monthly + Everyone
+  scopeFilter = "all";
+  timeFilter = "monthly";
+  viewAllBtn?.classList.add("active");
+  viewStudentsBtn?.classList.remove("active");
+  viewTeachersBtn?.classList.remove("active");
+  lbMonthlyBtn?.classList.add("active");
+  lbAllTimeBtn?.classList.remove("active");
+
   saveResults(totalTimeSec);
   backend.loadLeaderboard(scopeFilter, timeFilter, true);
 }
 
-function recordAnswer(answer, skipped = false) {
+function recordAnswer(symbolInput, numberInput, skipped = false) {
   if (!gameActive) return;
   if (!currentQuestion) return;
   const elapsed = (performance.now() - questionStartTime) / 1000;
-  const sanitizedAnswer = sanitizeAnswer(answer);
-  const accepted = parseAnswerOptions(currentQuestion.capital);
-  const isSkip = skipped || !sanitizedAnswer;
-  const correct = !isSkip && accepted.some((c) => sanitizedAnswer.toLowerCase() === c.toLowerCase());
+  const userSymbol = sanitizeSymbol(symbolInput);
+  const userNumber = sanitizeNumber(numberInput);
 
-  if (correct) correctCount += 1;
+  const normalizedSymbol = currentQuestion.symbol;
+  const normalizedNumber = currentQuestion.atomicNumber;
+
+  const isSkip = skipped || (!userSymbol && userNumber === null);
+  const symbolCorrect = !isSkip && userSymbol && userSymbol.toLowerCase() === normalizedSymbol.toLowerCase();
+  const numberCorrect = !isSkip && userNumber !== null && userNumber === normalizedNumber;
+
+  if (symbolCorrect) correctSymbols += 1;
+  if (numberCorrect) correctNumbers += 1;
 
   questionLog.push({
-    state: currentQuestion.state,
-    capital: currentQuestion.capital,
-    capitalDisplay: formatAnswersDisplay(currentQuestion.capital),
-    answer: isSkip ? "SKIP" : sanitizedAnswer,
-    correct,
+    element: currentQuestion.element,
+    symbol: currentQuestion.symbol,
+    atomicNumber: currentQuestion.atomicNumber,
+    userSymbol: userSymbol || "",
+    userAtomicNumber: Number.isFinite(userNumber) ? userNumber : "",
+    correctSymbol: symbolCorrect,
+    correctNumber: numberCorrect,
     skipped: isSkip,
     timeTaken: elapsed
   });
 
-  const disp = formatAnswersDisplay(currentQuestion.capital);
-  setFeedback(correct ? "Correct!" : `Incorrect. Capital is ${disp.replace(/\n/g, " ") }.`, correct);
+  let feedback;
+  if (isSkip) {
+    feedback = "Skipped.";
+  } else if (symbolCorrect && numberCorrect) {
+    feedback = "Both correct!";
+  } else if (symbolCorrect || numberCorrect) {
+    feedback = "Half right.";
+  } else {
+    feedback = `Incorrect. Symbol ${currentQuestion.symbol}, Atomic # ${currentQuestion.atomicNumber}.`;
+  }
+  setFeedback(feedback, (symbolCorrect && numberCorrect) ? "success" : "error");
 
   if (pool.length === 0) {
     finishGame();
@@ -317,13 +289,36 @@ function recordAnswer(answer, skipped = false) {
 }
 
 function handleSubmit() {
-  const trimmed = (answerInput?.value || "").trim();
-  if (!answerInput) return;
-  recordAnswer(trimmed, false);
+  const s = (answerSymbol?.value || "").trim();
+  const n = (answerNumber?.value || "").trim();
+  recordAnswer(s, n, false);
 }
 
 function handleSkip() {
-  recordAnswer("SKIP", true);
+  recordAnswer("", "", true);
+}
+
+function renderAnswersTable() {
+  if (!answersContainer || !answersTableBody) return;
+  answersTableBody.innerHTML = "";
+  questionLog.forEach((q) => {
+    const tr = document.createElement("tr");
+    const bothCorrect = q.correctSymbol && q.correctNumber;
+    const anyCorrect = q.correctSymbol || q.correctNumber;
+    tr.classList.add(bothCorrect ? "answer-correct" : anyCorrect ? "answer-partial" : "answer-wrong");
+    [q.element, q.symbol, q.atomicNumber, q.userSymbol || "", q.userAtomicNumber || ""].forEach((val) => {
+      const td = document.createElement("td");
+      td.textContent = val;
+      tr.appendChild(td);
+    });
+    answersTableBody.appendChild(tr);
+  });
+  answersContainer.style.display = "block";
+  answersVisible = true;
+  if (showAnswersBtn) {
+    showAnswersBtn.textContent = "Hide Answers";
+    showAnswersBtn.classList.add("active");
+  }
 }
 
 function showLeaderboardOnly() {
@@ -346,15 +341,10 @@ function showLeaderboardOnly() {
   backend.loadLeaderboard(scopeFilter, timeFilter, true);
 }
 
-function updateActionLabel() {
-  if (!actionBtn || !answerInput) return;
-  const hasText = answerInput.value.trim().length > 0;
-  actionBtn.textContent = hasText ? "Submit" : "Skip";
-}
-
 function handleAction() {
-  const value = (answerInput?.value || "").trim();
-  if (!value) {
+  const sym = (answerSymbol?.value || "").trim();
+  const num = (answerNumber?.value || "").trim();
+  if (!sym && !num) {
     handleSkip();
   } else {
     handleSubmit();
@@ -368,9 +358,18 @@ function handleGiveUp() {
 
 function bindEvents() {
   if (actionBtn) actionBtn.addEventListener("click", handleAction);
-  if (answerInput) {
-    answerInput.addEventListener("input", updateActionLabel);
-    answerInput.addEventListener("keydown", (e) => {
+  if (answerSymbol) {
+    answerSymbol.addEventListener("input", updateActionLabel);
+    answerSymbol.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleAction();
+      }
+    });
+  }
+  if (answerNumber) {
+    answerNumber.addEventListener("input", updateActionLabel);
+    answerNumber.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         handleAction();
@@ -438,7 +437,7 @@ function bindEvents() {
 
 bindEvents();
 
-FM.stateCapitalsGame = {
+FM.elementQuizGame = {
   startGame,
   showLeaderboardOnly
 };
