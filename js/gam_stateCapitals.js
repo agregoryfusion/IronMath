@@ -19,6 +19,9 @@ const endTime = document.getElementById("end-time");
 const sessionIdEl = document.getElementById("session-id");
 const savedStatus = document.getElementById("saved-status");
 const restartBtn = document.getElementById("restartBtn");
+const showAnswersBtn = document.getElementById("showAnswersBtn");
+const answersContainer = document.getElementById("answersContainer");
+const answersTableBody = document.querySelector("#answersTable tbody");
 
 const lbMonthlyBtn = document.getElementById("lbMonthlyBtn");
 const lbAllTimeBtn = document.getElementById("lbAllTimeBtn");
@@ -92,6 +95,7 @@ let gameActive = false;
 let currentQuestion = null;
 let totalQuestions = 0;
 let questionsAsked = 0;
+let answersVisible = false;
 
 function sanitizeAnswer(input) {
   // Allow letters, spaces, apostrophes, periods, and hyphens; strip everything else.
@@ -136,6 +140,27 @@ function showQuestion() {
   updateActionLabel();
 }
 
+function renderAnswersTable() {
+  if (!answersContainer || !answersTableBody) return;
+  answersTableBody.innerHTML = "";
+  questionLog.forEach((q) => {
+    const tr = document.createElement("tr");
+    tr.classList.add(q.correct ? "answer-correct" : "answer-wrong");
+    [q.state, q.capital, q.answer || ""].forEach((val) => {
+      const td = document.createElement("td");
+      td.textContent = val;
+      tr.appendChild(td);
+    });
+    answersTableBody.appendChild(tr);
+  });
+  answersContainer.style.display = "block";
+  answersVisible = true;
+  if (showAnswersBtn) {
+    showAnswersBtn.textContent = "Hide Answers";
+    showAnswersBtn.classList.add("active");
+  }
+}
+
 function startGame() {
   pool = shuffle([...STATES]);
   totalQuestions = pool.length;
@@ -150,6 +175,7 @@ function startGame() {
   scopeFilter = "students";
   leaderboardOnlyMode = false;
   gameActive = true;
+  answersVisible = false;
   endScreen?.classList.remove("leaderboard-only");
 
   if (loadingScreen) loadingScreen.style.display = "none";
@@ -230,6 +256,12 @@ function finishGame(options = {}) {
   savedStatus.textContent = "Saving...";
   savedStatus.classList.remove("success", "error");
   sessionIdEl.textContent = "";
+  answersVisible = false;
+  if (answersContainer) answersContainer.style.display = "none";
+  if (showAnswersBtn) {
+    showAnswersBtn.textContent = "Show Answers";
+    showAnswersBtn.classList.remove("active");
+  }
 
   saveResults(totalTimeSec);
   backend.loadLeaderboard(scopeFilter, timeFilter, true);
@@ -370,6 +402,18 @@ function bindEvents() {
   });
 
   if (giveUpBtn) giveUpBtn.addEventListener("click", handleGiveUp);
+  if (showAnswersBtn) {
+    showAnswersBtn.addEventListener("click", () => {
+      if (answersVisible) {
+        answersVisible = false;
+        if (answersContainer) answersContainer.style.display = "none";
+        showAnswersBtn.textContent = "Show Answers";
+        showAnswersBtn.classList.remove("active");
+      } else {
+        renderAnswersTable();
+      }
+    });
+  }
 }
 
 bindEvents();

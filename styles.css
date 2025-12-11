@@ -718,3 +718,41 @@ h1{margin:18px 0 6px;color:var(--accent)}
   font-size: 0.75rem;  /* also shrink text */
   line-height: 1;
 }
+
+/* Answers table (state capitals) */
+.answers-container{
+  display:none;
+  margin:20px auto;
+  max-width:800px;
+}
+.answers-toggle{
+  display:block;
+  margin:12px auto 0;
+  width:fit-content;
+}
+.answers-toggle-wrap{
+  display:flex;
+  justify-content:center;
+  width:100%;
+}
+.answers-toggle.active{
+  box-shadow:0 0 12px var(--accent);
+  border-color:var(--accent2);
+  color:#fff;
+}
+.answers-container table{
+  width:100%;
+  border-collapse:collapse;
+}
+.answers-container th,
+.answers-container td{
+  padding:8px 10px;
+  border-bottom:1px solid #2a2f37;
+  text-align:left;
+}
+.answers-container th{
+  color:var(--accent);
+  border-bottom:2px solid #1e90ff33;
+}
+.answer-correct td{color:#7fdca2;}
+.answer-wrong td{color:#ff8a8a;}

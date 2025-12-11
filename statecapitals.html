@@ -56,6 +56,23 @@
     <p id="saved-status"></p>
 
     <button id="restartBtn">Play Again</button>
+    <div class="answers-toggle-wrap">
+      <button id="showAnswersBtn" class="ghost-btn answers-toggle" type="button">Show Answers</button>
+    </div>
+
+    <div id="answersContainer" class="answers-container">
+      <table id="answersTable">
+        <thead>
+          <tr>
+            <th>State</th>
+            <th>Correct Answer</th>
+            <th>Your Answer</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
     <div id="leaderboardTimeButtons">
       <button id="lbMonthlyBtn" class="active">Monthly</button>
       <button id="lbAllTimeBtn">All-Time</button>
