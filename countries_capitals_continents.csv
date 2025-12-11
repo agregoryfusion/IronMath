@@ -1,0 +1,198 @@
+Country,Capital,Continent Group
+Morocco,Rabat,Africa
+Algeria,Algiers,Africa
+Tunisia,Tunis,Africa
+Libya,Tripoli,Africa
+Egypt,Cairo,Africa
+Mauritania,Nouakchott,Africa
+Mali,Bamako,Africa
+Niger,Niamey,Africa
+Chad,N'Djamena,Africa
+Sudan,Khartoum,Africa
+Eritrea,Asmara,Africa
+Djibouti,Djibouti,Africa
+Cabo Verde,Praia,Africa
+Gambia,Banjul,Africa
+Senegal,Dakar,Africa
+Guinea-Bissau,Bissau,Africa
+Guinea,Conakry,Africa
+Sierra Leone,Freetown,Africa
+Liberia,Monrovia,Africa
+Cote d'Ivoire,Yamoussoukro,Africa
+Burkina Faso,Ouagadougou,Africa
+Ghana,Accra,Africa
+Togo,Lome,Africa
+Benin,Porto-Novo,Africa
+Nigeria,Abuja,Africa
+Cameroon,Yaounde,Africa
+Central African Republic,Bangui,Africa
+South Sudan,Juba,Africa
+Ethiopia,Addis Ababa,Africa
+Somalia,Mogadishu,Africa
+Sao Tome and Principe,Sao Tome,Africa
+Equatorial Guinea,Malabo,Africa
+Gabon,Libreville,Africa
+Republic of the Congo,Brazzaville,Africa
+Democratic Republic of the Congo,Kinshasa,Africa
+Rwanda,Kigali,Africa
+Uganda,Kampala,Africa
+Kenya,Nairobi,Africa
+Burundi,Gitega,Africa
+Tanzania,Dodoma,Africa
+Seychelles,Victoria,Africa
+Angola,Luanda,Africa
+Zambia,Lusaka,Africa
+Malawi,Lilongwe,Africa
+Comoros,Moroni,Africa
+Namibia,Windhoek,Africa
+Botswana,Gaborone,Africa
+Zimbabwe,Harare,Africa
+Mozambique,Maputo,Africa
+Madagascar,Antananarivo,Africa
+Mauritius,Port Louis,Africa
+South Africa,Pretoria,Africa
+Lesotho,Maseru,Africa
+Eswatini,Mbabane,Africa
+Turkey,Ankara,Asia
+Cyprus,Nicosia,Asia
+Lebanon,Beirut,Asia
+Israel,Jerusalem,Asia
+Palestine,East Jerusalem,Asia
+Syria,Damascus,Asia
+Jordan,Amman,Asia
+Georgia,Tbilisi,Asia
+Armenia,Yerevan,Asia
+Azerbaijan,Baku,Asia
+Iraq,Baghdad,Asia
+Kuwait,Kuwait City,Asia
+Saudi Arabia,Riyadh,Asia
+Bahrain,Manama,Asia
+Qatar,Doha,Asia
+United Arab Emirates,Abu Dhabi,Asia
+Yemen,Sana'a,Asia
+Oman,Muscat,Asia
+Iran,Tehran,Asia
+Kazakhstan,Nur-Sultan,Asia
+Uzbekistan,Tashkent,Asia
+Turkmenistan,Ashgabat,Asia
+Kyrgyzstan,Bishkek,Asia
+Tajikistan,Dushanbe,Asia
+Afghanistan,Kabul,Asia
+Pakistan,Islamabad,Asia
+India,New Delhi,Asia
+Maldives,Male,Asia
+Nepal,Kathmandu,Asia
+Sri Lanka,Sri Jayawardenepura Kotte,Asia
+Bhutan,Thimphu,Asia
+Bangladesh,Dhaka,Asia
+Mongolia,Ulaanbaatar,Asia
+China,Beijing,Asia
+Myanmar,Naypyidaw,Asia
+Thailand,Bangkok,Asia
+Laos,Vientiane,Asia
+Cambodia,Phnom Penh,Asia
+Vietnam,Hanoi,Asia
+Malaysia,Kuala Lumpur,Asia
+Singapore,Singapore,Asia
+Indonesia,Jakarta,Asia
+Brunei,Bandar Seri Begawan,Asia
+North Korea,Pyongyang,Asia
+South Korea,Seoul,Asia
+Taiwan,Taipei,Asia
+Philippines,Manila,Asia
+Timor-Leste,Dili,Asia
+Japan,Tokyo,Asia
+Palau,Ngerulmud,Australia and Oceania
+Federated States of Micronesia,Palikir,Australia and Oceania
+Papua New Guinea,Port Moresby,Australia and Oceania
+Australia,Canberra,Australia and Oceania
+Marshall Islands,Majuro,Australia and Oceania
+Nauru,Yaren,Australia and Oceania
+Solomon Islands,Honiara,Australia and Oceania
+Vanuatu,Port Vila,Australia and Oceania
+Tuvalu,Funafuti,Australia and Oceania
+Fiji,Suva,Australia and Oceania
+New Zealand,Wellington,Australia and Oceania
+Samoa,Apia,Australia and Oceania
+Tonga,Nukuʻalofa,Australia and Oceania
+Kiribati,Tarawa,Australia and Oceania
+Iceland,Reykjavik,Europe
+Ireland,Dublin,Europe
+Portugal,Lisbon,Europe
+Spain,Madrid,Europe
+United Kingdom,London,Europe
+France,Paris,Europe
+Andorra,Andorra la Vella,Europe
+The Netherlands,Amsterdam,Europe
+Belgium,Brussels,Europe
+Luxembourg,Luxembourg,Europe
+Norway,Oslo,Europe
+Sweden,Stockholm,Europe
+Denmark,Copenhagen,Europe
+Germany,Berlin,Europe
+Liechtenstein,Vaduz,Europe
+Switzerland,Bern,Europe
+Italy,Rome,Europe
+Monaco,Monaco,Europe
+San Marino,San Marino,Europe
+Vatican City,Vatican City,Europe
+Malta,Valletta,Europe
+Czech Republic,Prague,Europe
+Austria,Vienna,Europe
+Slovenia,Ljubljana,Europe
+Poland,Warsaw,Europe
+Slovakia,Bratislava,Europe
+Hungary,Budapest,Europe
+Croatia,Zagreb,Europe
+Bosnia and Herzegovina,Sarajevo,Europe
+Montenegro,Podgorica,Europe
+Serbia,Belgrade,Europe
+Kosovo,Pristina,Europe
+Albania,Tirana,Europe
+North Macedonia,Skopje,Europe
+Greece,Athens,Europe
+Finland,Helsinki,Europe
+Estonia,Tallinn,Europe
+Latvia,Riga,Europe
+Lithuania,Vilnius,Europe
+Belarus,Minsk,Europe
+Ukraine,Kyiv,Europe
+Moldova,Chisinau,Europe
+Romania,Bucharest,Europe
+Bulgaria,Sofia,Europe
+Russia,Moscow,Europe
+Canada,Ottawa,North America
+United States of America,Washington, D.C.,North America
+Mexico,Mexico City,North America
+The Bahamas,Nassau,North America
+Cuba,Havana,North America
+Jamaica,Kingston,North America
+Haiti,Port-au-Prince,North America
+Dominican Republic,Santo Domingo,North America
+Saint Kitts and Nevis,Basseterre,North America
+Antigua and Barbuda,Saint John's,North America
+Dominica,Roseau,North America
+Saint Lucia,Castries,North America
+Saint Vincent and the Grenadines,Kingstown,North America
+Barbados,Bridgetown,North America
+Grenada,Saint George's,North America
+Trinidad and Tobago,Port of Spain,North America
+Belize,Belmopan,North America
+Guatemala,Guatemala City,North America
+Honduras,Tegucigalpa,North America
+El Salvador,San Salvador,North America
+Nicaragua,Managua,North America
+Costa Rica,San Jose,North America
+Panama,Panama City,North America
+Colombia,Bogota,South America
+Venezuela,Caracas,South America
+Guyana,Georgetown,South America
+Suriname,Paramaribo,South America
+Ecuador,Quito,South America
+Peru,Lima,South America
+Brazil,Brasilia,South America
+Bolivia,La Paz,South America
+Chile,Santiago,South America
+Paraguay,Asuncion,South America
+Uruguay,Montevideo,South America
+Argentina,Buenos Aires,South America
