@@ -20,6 +20,9 @@ const endTime = document.getElementById("end-time");
 const sessionIdEl = document.getElementById("session-id");
 const savedStatus = document.getElementById("saved-status");
 const restartBtn = document.getElementById("restartBtn");
+const showAnswersBtn = document.getElementById("showAnswersBtn");
+const answersContainer = document.getElementById("answersContainer");
+const answersTableBody = document.querySelector("#answersTable tbody");
 
 const lbMonthlyBtn = document.getElementById("lbMonthlyBtn");
 const lbAllTimeBtn = document.getElementById("lbAllTimeBtn");
@@ -44,6 +47,7 @@ let leaderboardOnlyMode = false;
 let gameActive = false;
 let currentQuestion = null;
 let askedCount = 0;
+let answersVisible = false;
 
 function sanitizeAnswer(input) {
   const cleaned = (input || "").replace(/[^a-zA-Z\s.'-]/g, "");
@@ -167,6 +171,7 @@ function startGame() {
       leaderboardOnlyMode = false;
       gameActive = true;
       askedCount = 0;
+      answersVisible = false;
       endScreen?.classList.remove("leaderboard-only");
 
       if (loadingScreen) loadingScreen.style.display = "none";
@@ -250,6 +255,12 @@ function finishGame(options = {}) {
   savedStatus.textContent = "Saving...";
   savedStatus.classList.remove("success", "error");
   sessionIdEl.textContent = "";
+  answersVisible = false;
+  if (answersContainer) answersContainer.style.display = "none";
+  if (showAnswersBtn) {
+    showAnswersBtn.textContent = "Show Answers";
+    showAnswersBtn.classList.remove("active");
+  }
 
   // Default leaderboard view: Monthly + Everyone
   scopeFilter = "all";
@@ -306,6 +317,27 @@ function handleSubmit() {
 function handleSkip() {
   recordAnswer("SKIP", true);
   showQuestion();
+}
+
+function renderAnswersTable() {
+  if (!answersContainer || !answersTableBody) return;
+  answersTableBody.innerHTML = "";
+  questionLog.forEach((q) => {
+    const tr = document.createElement("tr");
+    tr.classList.add(q.correct ? "answer-correct" : "answer-wrong");
+    [q.continent, q.country, q.capital, q.answer || ""].forEach((val) => {
+      const td = document.createElement("td");
+      td.textContent = val;
+      tr.appendChild(td);
+    });
+    answersTableBody.appendChild(tr);
+  });
+  answersContainer.style.display = "block";
+  answersVisible = true;
+  if (showAnswersBtn) {
+    showAnswersBtn.textContent = "Hide Answers";
+    showAnswersBtn.classList.add("active");
+  }
 }
 
 function skipContinent() {
@@ -414,6 +446,18 @@ function bindEvents() {
   });
 
   if (giveUpBtn) giveUpBtn.addEventListener("click", skipContinent);
+  if (showAnswersBtn) {
+    showAnswersBtn.addEventListener("click", () => {
+      if (answersVisible) {
+        answersVisible = false;
+        if (answersContainer) answersContainer.style.display = "none";
+        showAnswersBtn.textContent = "Show Answers";
+        showAnswersBtn.classList.remove("active");
+      } else {
+        renderAnswersTable();
+      }
+    });
+  }
 }
 
 bindEvents();
