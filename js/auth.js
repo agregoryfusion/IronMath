@@ -18,6 +18,7 @@ const leaderboardBtn = document.getElementById("viewLeaderboardBtn");
 
 const gameContainer = document.getElementById("game-container");
 const endScreen = document.getElementById("end-screen");
+let unauthorizedScreen = null;
 
 // Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
@@ -25,7 +26,8 @@ import {
   getAuth,
   setPersistence,
   browserLocalPersistence,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 
 // Firebase config
@@ -50,6 +52,32 @@ FM.auth = {
   isStudent: false
 };
 
+function showUnauthorized(authInstance, message) {
+  if (unauthorizedScreen) unauthorizedScreen.remove();
+  unauthorizedScreen = document.createElement("div");
+  unauthorizedScreen.className = "panel";
+  unauthorizedScreen.style.maxWidth = "600px";
+  unauthorizedScreen.style.margin = "60px auto";
+  unauthorizedScreen.innerHTML = `
+    <h3>Access Restricted</h3>
+    <p>${message || "Please sign in with your @fusionacademy account to play."}</p>
+    <button id="retrySignInBtn" class="primary-btn">Sign in again</button>
+  `;
+  document.body.appendChild(unauthorizedScreen);
+  if (loadingScreen) loadingScreen.style.display = "none";
+  if (emperorScreen) emperorScreen.style.display = "none";
+  if (gameContainer) gameContainer.style.display = "none";
+  if (endScreen) endScreen.style.display = "none";
+  const retryBtn = unauthorizedScreen.querySelector("#retrySignInBtn");
+  if (retryBtn) {
+    retryBtn.addEventListener("click", async () => {
+      try { await signOut(authInstance); } catch (e) { console.error(e); }
+      if (unauthorizedScreen) unauthorizedScreen.remove();
+      window.location.href = "index.html";
+    });
+  }
+}
+
 function showLoading() {
   if (loadingScreen) loadingScreen.style.display = "flex";
   if (emperorScreen) emperorScreen.style.display = "none";
@@ -71,6 +99,11 @@ async function handleSignedIn(user) {
   }
 
   const playerName = user.displayName || (U && U.parseEmailToName ? U.parseEmailToName(user.email) : "Player");
+
+  const allowed = email.endsWith("@fusionacademy.com") || email.endsWith("@fusionacademy.me");
+  if (!allowed) {
+    return showUnauthorized(auth, "Please sign in with your @fusionacademy account to play.");
+  }
 
   FM.auth.playerName = playerName;
   FM.auth.email = email;
