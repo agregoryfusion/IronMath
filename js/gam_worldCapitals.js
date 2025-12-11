@@ -251,6 +251,15 @@ function finishGame(options = {}) {
   savedStatus.classList.remove("success", "error");
   sessionIdEl.textContent = "";
 
+  // Default leaderboard view: Monthly + Everyone
+  scopeFilter = "all";
+  timeFilter = "monthly";
+  viewAllBtn?.classList.add("active");
+  viewStudentsBtn?.classList.remove("active");
+  viewTeachersBtn?.classList.remove("active");
+  lbMonthlyBtn?.classList.add("active");
+  lbAllTimeBtn?.classList.remove("active");
+
   saveResults(totalTimeSec);
   backend.loadLeaderboard(scopeFilter, timeFilter, true);
 }
