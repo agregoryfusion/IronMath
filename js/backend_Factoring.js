@@ -76,7 +76,6 @@ function renderLeaderboard(rows) {
     tr.appendChild(t(idx + 1));
     tr.appendChild(t(row.playerName || "?"));
     tr.appendChild(t(row.questionsAnswered ?? 0));
-    tr.appendChild(t(row.stageReached ?? "—"));
     tr.appendChild(t((row.totalTime ?? 0).toFixed(2)));
     tr.appendChild(t(((row.totalTime ?? 0) / Math.max(1, row.questionsAnswered ?? 1)).toFixed(2)));
     const d = row.dateAdded ? new Date(row.dateAdded) : null;
