@@ -17,15 +17,16 @@ const restartBtn = document.getElementById("restartBtn");
 const lbWrap = document.getElementById("leaderboardContainer");
 
 const CONFIG = {
-  startStage: 8,
+  startStage: 5,
   timerSeconds: 15,
   wrongPenaltySeconds: 3,
   startingMinFactor: 2,
   startingMaxFactor: 5,
   factorIncrementEvery: 1, // how many stage bumps before adding another factor button
-  maxNumberAddend: -4, // used in (stage + addend)^exponent for max number
+  maxNumberAddend: 2, // used in (stage + addend)^exponent for max number (stage 8 -> cap ~100)
   maxNumberExponent: 2.0,
-  minNumberFloor: 10
+  minNumberFloor: 10,
+  duplicateProtectionWindow: 20
 };
 
 let sessionId = U.buildSessionID ? U.buildSessionID("Player") : "Session";
@@ -45,6 +46,8 @@ let mistakesThisQuestion = 0;
 let leaderboardOnlyMode = false;
 
 let runData = { sessionID: "", results: [] };
+const factorButtonMap = new Map();
+const recentNumbers = [];
 
 function shake(el, mult = 1) {
   if (!el) return;
@@ -90,34 +93,102 @@ function computeNumberBounds(currentStage) {
 
 function generateNumberForFactors(factors, currentStage) {
   const { minNumber, maxNumber } = computeNumberBounds(currentStage);
-  const factor = factors[Math.floor(Math.random() * factors.length)];
-  const cofactorMin = Math.max(2, Math.ceil(minNumber / factor));
-  const cofactorMax = Math.max(cofactorMin, Math.floor(maxNumber / factor));
-  const cofactor = cofactorMin + Math.floor(Math.random() * (cofactorMax - cofactorMin + 1));
-  const value = factor * cofactor;
-  return value;
+  const attempts = Math.max(30, CONFIG.duplicateProtectionWindow * 2);
+  let fallback = null;
+
+  for (let i = 0; i < attempts; i++) {
+    const factor = factors[Math.floor(Math.random() * factors.length)];
+    const cofactorMin = Math.max(2, Math.ceil(minNumber / factor));
+    const cofactorMax = Math.max(cofactorMin, Math.floor(maxNumber / factor));
+    const cofactor = cofactorMin + Math.floor(Math.random() * (cofactorMax - cofactorMin + 1));
+    const value = factor * cofactor;
+    if (fallback === null) fallback = value;
+    if (!recentNumbers.includes(value)) {
+      return value;
+    }
+  }
+
+  // If we exhausted attempts, fall back to the last generated value
+  return fallback ?? minNumber;
 }
 
 function renderFactorButtons(factors) {
   if (!factorButtonsEl) return;
   factorButtonsEl.innerHTML = "";
+  factorButtonMap.clear();
+  const topRow = document.createElement("div");
+  topRow.className = "factor-row";
+  const bottomRow = document.createElement("div");
+  bottomRow.className = "factor-row";
+
   factors.forEach((f) => {
     const btn = document.createElement("button");
     btn.textContent = f;
     btn.className = "factor-btn";
     if (selected.has(f)) btn.classList.add("selected");
     btn.addEventListener("click", () => {
-      if (selected.has(f)) selected.delete(f);
-      else selected.add(f);
-      btn.classList.toggle("selected");
+      toggleFactorSelection(f);
     });
-    factorButtonsEl.appendChild(btn);
+    factorButtonMap.set(f, btn);
+    if (f <= 10) {
+      topRow.appendChild(btn);
+    } else {
+      bottomRow.appendChild(btn);
+    }
   });
+
+  factorButtonsEl.appendChild(topRow);
+  if (bottomRow.childElementCount > 0) {
+    factorButtonsEl.appendChild(bottomRow);
+  }
 }
 
 function updateHud() {
   if (stageInfo) stageInfo.textContent = `Stage ${stage}`;
   if (questionCountEl) questionCountEl.textContent = `Question ${questionCount + 1}`;
+}
+
+function toggleFactorSelection(factor) {
+  if (!factorButtonMap.has(factor)) return;
+  const btn = factorButtonMap.get(factor);
+  if (selected.has(factor)) {
+    selected.delete(factor);
+    btn.classList.remove("selected");
+  } else {
+    selected.add(factor);
+    btn.classList.add("selected");
+  }
+}
+
+function handleFactorHotkeys(e) {
+  const key = e.key;
+  if (!current || !current.factors) return;
+
+  // number keys 0-9 -> factors 10 and 2-9
+  if (/^[0-9]$/.test(key)) {
+    const factor = key === "0" ? 10 : parseInt(key, 10);
+    if (current.factors.includes(factor)) {
+      toggleFactorSelection(factor);
+    }
+    return;
+  }
+
+  // q-p keys map to factors 11-20
+  const keyMap = {
+    q: 11, w: 12, e: 13, r: 14, t: 15,
+    y: 16, u: 17, i: 18, o: 19, p: 20
+  };
+  const mapped = keyMap[key.toLowerCase()];
+  if (mapped && current.factors.includes(mapped)) {
+    toggleFactorSelection(mapped);
+  }
+}
+
+function handleSubmitHotkeys(e) {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    evaluateAnswer();
+  }
 }
 
 function startTimer() {
@@ -144,6 +215,10 @@ function nextQuestion() {
   const value = generateNumberForFactors(factors, stage);
   const correctFactors = factors.filter((f) => value % f === 0);
   current = { value, factors, correctFactors, stage };
+  recentNumbers.push(value);
+  while (recentNumbers.length > CONFIG.duplicateProtectionWindow) {
+    recentNumbers.shift();
+  }
   selected = new Set();
   mistakesThisQuestion = 0;
   penaltySecondsThisQuestion = 0;
@@ -197,7 +272,7 @@ function evaluateAnswer() {
     mistakesThisQuestion++;
     penaltySeconds += CONFIG.wrongPenaltySeconds;
     penaltySecondsThisQuestion += CONFIG.wrongPenaltySeconds;
-    if (statusEl) statusEl.textContent = "Try again — time reduced!";
+    if (statusEl) statusEl.textContent = "Try again - time reduced!";
     shake(factorNumberEl, mistakesThisQuestion);
   }
 }
@@ -371,6 +446,9 @@ if (restartBtn) {
     startGame();
   });
 }
+
+window.addEventListener("keydown", handleFactorHotkeys);
+window.addEventListener("keydown", handleSubmitHotkeys);
 
 function showLeaderboardOnly() {
   cancelAnimationFrame(rafId);

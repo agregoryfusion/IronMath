@@ -3,7 +3,8 @@
 -- Leaderboard table
 create table if not exists factoring_leaderboard (
   leaderboard_id bigint generated always as identity primary key,
-  user_id uuid references users(user_id),
+  -- Align with existing users.user_id (bigint) to avoid type mismatch
+  user_id bigint references users(user_id) on delete set null,
   player_name text not null,
   stage_reached integer not null,
   questions_answered integer not null default 0,
@@ -18,7 +19,8 @@ create table if not exists factoring_leaderboard (
 -- Sessions table
 create table if not exists factoring_sessions (
   session_id bigint generated always as identity primary key,
-  user_id uuid references users(user_id),
+  -- Align with existing users.user_id (bigint) to avoid type mismatch
+  user_id bigint references users(user_id) on delete set null,
   player_name text not null,
   questions_answered integer not null default 0,
   stage_reached integer not null,

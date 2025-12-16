@@ -778,10 +778,15 @@ h1{margin:18px 0 6px;color:var(--accent)}
   margin:16px 0 8px;
 }
 .factor-buttons{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(70px,1fr));
-  gap:10px;
-  margin:18px 0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin:18px 0;
+}
+.factor-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(70px,1fr));
+    gap:10px;
 }
 .factor-btn{
   padding:12px 10px;
