@@ -758,3 +758,51 @@ h1{margin:18px 0 6px;color:var(--accent)}
 .answer-correct td{color:#7fdca2;}
 .answer-partial td{color:#ffd27a;}
 .answer-wrong td{color:#ff8a8a;}
+
+/* Factor Sprint */
+.factor-game{
+  max-width:620px;
+  margin:0 auto;
+  padding:16px;
+}
+.factor-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+.factor-number{
+  font-size:56px;
+  font-weight:800;
+  text-align:center;
+  margin:16px 0 8px;
+}
+.factor-buttons{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(70px,1fr));
+  gap:10px;
+  margin:18px 0;
+}
+.factor-btn{
+  padding:12px 10px;
+  background:linear-gradient(180deg,#202632,#151a24);
+  border:1px solid #2a2f37;
+  border-radius:10px;
+  color:#e3e7ef;
+  font-weight:700;
+  cursor:pointer;
+  transition:all 0.15s ease;
+}
+.factor-btn:hover{border-color:var(--accent2);}
+.factor-btn.selected{
+  background:var(--accent);
+  border-color:var(--accent2);
+  color:#0b1020;
+  box-shadow:0 0 16px rgba(30,144,255,0.35);
+}
+.factor-actions{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  justify-content:center;
+}

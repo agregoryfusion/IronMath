@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Factor Sprint</title>
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Supabase JS (v2) for backend/leaderboard -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="game-topbar">
+    <a class="back-link" href="index.html">← Apps</a>
+    <span class="pill pill-ghost" id="version"></span>
+  </div>
+
+  <h1>Factor Sprint</h1>
+
+  <div id="loading-screen">
+    <div class="loader"></div>
+    <p class="muted">Loading Fun</p>
+  </div>
+
+  <div id="emperor-screen">
+    <h2 class="emp-line">The Monthly Regent</h2>
+    <h2 class="emp-line">Of Factors Is:</h2>
+    <h1 id="emperorName" class="emp-name">...</h1>
+
+    <h2 class="emp-line">With A Score Of:</h2>
+    <h1 id="emperorScore" class="emp-score">...</h1>
+
+    <div class="emp-buttons">
+      <button id="playBtn">Play</button>
+      <button id="viewLeaderboardBtn" class="ghost-btn">View Leaderboard</button>
+    </div>
+  </div>
+
+  <div id="game-container" class="factor-game">
+    <div class="factor-header">
+      <div id="stage-info" class="pill pill-ghost"></div>
+      <div id="question-count" class="muted small"></div>
+    </div>
+
+    <div id="factorNumber" class="factor-number">...</div>
+    <div id="timerBar"><div id="timerFill"></div></div>
+
+    <div id="factorButtons" class="factor-buttons"></div>
+    <div class="factor-actions">
+      <button id="submitAnswer" class="primary-btn">Submit</button>
+      <p id="factorStatus" class="muted small"></p>
+    </div>
+  </div>
+
+  <div id="end-screen">
+    <h3>Game Over</h3>
+
+    <p id="end-questions">Questions answered: ...</p>
+    <p id="end-penalty">Total penalty time: ... s</p>
+    <p id="end-total">Total time: ... s (<span id="end-with-penalty">...</span> s with penalties)</p>
+    <p id="end-avg">Avg time/question: ... s (<span id="end-avg-with-penalty">...</span> s with penalties)</p>
+
+    <p id="session-id"></p>
+    <p id="saved-status"></p>
+
+    <button id="restartBtn">Play Again</button>
+    <div id="leaderboardTimeButtons">
+      <button id="lbMonthlyBtn" class="active">Monthly</button>
+      <button id="lbAllTimeBtn">All-Time</button>
+    </div>
+
+    <div id="leaderboardButtons">
+      <button id="viewAllBtn">Everyone</button>
+      <button id="viewStudentsBtn">Students</button>
+      <button id="viewTeachersBtn">Teachers</button>
+    </div>
+
+    <div id="leaderboardContainer">
+      <p id="leaderboardStatus"></p>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>Questions</th>
+            <th>Stage</th>
+            <th>Time (s)</th>
+            <th>Time Per Question (s)</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module" src="js/auth_Factoring.js"></script>
+</body>
+</html>
