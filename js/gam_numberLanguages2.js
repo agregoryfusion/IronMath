@@ -9,7 +9,6 @@ const COLLISIONS = DATA2.COLLISIONS || {};
 const NUMBER_ORDER = DATA2.NUMBERS || Array.from({ length: 100 }, (_, i) => i + 1);
 
 const questionEl = document.getElementById("question");
-const numberLabel = document.getElementById("numberLabel");
 const optionGrid = document.getElementById("optionGrid");
 const feedbackEl = document.getElementById("feedback");
 const progressEl = document.getElementById("progress");
@@ -121,7 +120,6 @@ function showQuestion() {
   currentQuestion = { number, language, word, options };
 
   if (questionEl) questionEl.textContent = word;
-  if (numberLabel) numberLabel.textContent = `Number ${number}`;
   setFeedback("", true);
   renderOptions(options);
   questionStartTime = performance.now();
