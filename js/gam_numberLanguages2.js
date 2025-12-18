@@ -90,16 +90,9 @@ function pickLanguage() {
 
 function buildOptions(number, correctLanguage) {
   const collisionGroup = new Set(getCollisionGroup(number, correctLanguage));
-  const ordered = [];
-  LANGUAGES.forEach((lang) => {
-    if (lang === correctLanguage) ordered.push(lang);
-  });
-  LANGUAGES.forEach((lang) => {
-    if (lang !== correctLanguage && !collisionGroup.has(lang) && ordered.length < 4) {
-      ordered.push(lang);
-    }
-  });
-  return ordered.slice(0, 4);
+  return LANGUAGES
+    .filter((lang) => lang === correctLanguage || !collisionGroup.has(lang))
+    .slice(0, 4);
 }
 
 function renderOptions(options) {

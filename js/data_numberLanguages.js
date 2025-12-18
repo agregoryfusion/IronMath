@@ -410,7 +410,7 @@ function buildData(languages, wordMap) {
   };
 }
 
-const ROMANCE_LANGUAGES = ["French", "Spanish", "Portuguese", "Italian"];
+const ROMANCE_LANGUAGES = ["Portuguese", "French", "Spanish", "Italian"];
 const GERMANIC_LANGUAGES = ["Dutch", "German", "Swedish", "Norwegian"];
 
 const ROMANCE_WORDS = {
