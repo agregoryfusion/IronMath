@@ -1,8 +1,6 @@
 // data_numberLanguages.js - spelled-out numbers (1-100) for multiple languages
 const FM = (window.FastMath = window.FastMath || {});
 
-const NUMBER_LANGUAGES = ["French", "German", "Spanish", "Italian", "Dutch"];
-
 function frenchSub20(n) {
   const units = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"];
   const teens = {
@@ -194,6 +192,48 @@ function italianNumber(n) {
   return `${tensWord}${unitWord}`;
 }
 
+function portugueseNumber(n) {
+  const lookup = {
+    1: "um",
+    2: "dois",
+    3: "três",
+    4: "quatro",
+    5: "cinco",
+    6: "seis",
+    7: "sete",
+    8: "oito",
+    9: "nove",
+    10: "dez",
+    11: "onze",
+    12: "doze",
+    13: "treze",
+    14: "catorze",
+    15: "quinze",
+    16: "dezesseis",
+    17: "dezessete",
+    18: "dezoito",
+    19: "dezenove",
+    20: "vinte"
+  };
+  const tensWords = {
+    20: "vinte",
+    30: "trinta",
+    40: "quarenta",
+    50: "cinquenta",
+    60: "sessenta",
+    70: "setenta",
+    80: "oitenta",
+    90: "noventa"
+  };
+  if (n === 100) return "cem";
+  if (lookup[n]) return lookup[n];
+  const tens = Math.floor(n / 10) * 10;
+  const unit = n % 10;
+  const tensWord = tensWords[tens] || "";
+  if (unit === 0) return tensWord;
+  return `${tensWord} e ${lookup[unit] || ""}`.trim();
+}
+
 function dutchNumber(n) {
   const units = {
     0: "",
@@ -241,6 +281,96 @@ function dutchNumber(n) {
   return `${units[unit]}${link}${tensWord}`;
 }
 
+function swedishNumber(n) {
+  const units = {
+    0: "",
+    1: "ett",
+    2: "två",
+    3: "tre",
+    4: "fyra",
+    5: "fem",
+    6: "sex",
+    7: "sju",
+    8: "åtta",
+    9: "nio"
+  };
+  const teens = {
+    10: "tio",
+    11: "elva",
+    12: "tolv",
+    13: "tretton",
+    14: "fjorton",
+    15: "femton",
+    16: "sexton",
+    17: "sjutton",
+    18: "arton",
+    19: "nitton"
+  };
+  const tensWords = {
+    20: "tjugo",
+    30: "trettio",
+    40: "fyrtio",
+    50: "femtio",
+    60: "sextio",
+    70: "sjuttio",
+    80: "åttio",
+    90: "nittio"
+  };
+  if (n === 100) return "hundra";
+  if (n < 10) return units[n];
+  if (n < 20) return teens[n];
+  const tens = Math.floor(n / 10) * 10;
+  const unit = n % 10;
+  const tensWord = tensWords[tens] || "";
+  if (unit === 0) return tensWord;
+  return `${tensWord}${units[unit]}`;
+}
+
+function norwegianNumber(n) {
+  const units = {
+    0: "",
+    1: "en",
+    2: "to",
+    3: "tre",
+    4: "fire",
+    5: "fem",
+    6: "seks",
+    7: "sju",
+    8: "åtte",
+    9: "ni"
+  };
+  const teens = {
+    10: "ti",
+    11: "elleve",
+    12: "tolv",
+    13: "tretten",
+    14: "fjorten",
+    15: "femten",
+    16: "seksten",
+    17: "sytten",
+    18: "atten",
+    19: "nitten"
+  };
+  const tensWords = {
+    20: "tjue",
+    30: "tretti",
+    40: "førti",
+    50: "femti",
+    60: "seksti",
+    70: "sytti",
+    80: "åtti",
+    90: "nitti"
+  };
+  if (n === 100) return "hundre";
+  if (n < 10) return units[n];
+  if (n < 20) return teens[n];
+  const tens = Math.floor(n / 10) * 10;
+  const unit = n % 10;
+  const tensWord = tensWords[tens] || "";
+  if (unit === 0) return tensWord;
+  return `${tensWord}${units[unit]}`;
+}
+
 function buildList(fn) {
   const arr = new Array(101);
   for (let i = 1; i <= 100; i++) {
@@ -271,19 +401,32 @@ function computeCollisions(wordsByLang, languages) {
   return collisions;
 }
 
-const NUMBER_WORDS = {
+function buildData(languages, wordMap) {
+  return {
+    LANGUAGES: languages,
+    WORDS: wordMap,
+    COLLISIONS: computeCollisions(wordMap, languages),
+    NUMBERS: Array.from({ length: 100 }, (_, i) => i + 1)
+  };
+}
+
+const ROMANCE_LANGUAGES = ["French", "Spanish", "Portuguese", "Italian"];
+const GERMANIC_LANGUAGES = ["Dutch", "German", "Swedish", "Norwegian"];
+
+const ROMANCE_WORDS = {
   French: buildList(frenchNumber),
-  German: buildList(germanNumber),
   Spanish: buildList(spanishNumber),
-  Italian: buildList(italianNumber),
-  Dutch: buildList(dutchNumber)
+  Portuguese: buildList(portugueseNumber),
+  Italian: buildList(italianNumber)
 };
 
-const NUMBER_COLLISIONS = computeCollisions(NUMBER_WORDS, NUMBER_LANGUAGES);
-
-FM.numberLanguageData = {
-  LANGUAGES: NUMBER_LANGUAGES,
-  WORDS: NUMBER_WORDS,
-  COLLISIONS: NUMBER_COLLISIONS,
-  NUMBERS: Array.from({ length: 100 }, (_, i) => i + 1)
+const GERMANIC_WORDS = {
+  Dutch: buildList(dutchNumber),
+  German: buildList(germanNumber),
+  Swedish: buildList(swedishNumber),
+  Norwegian: buildList(norwegianNumber)
 };
+
+FM.numberLanguageDataRomance = buildData(ROMANCE_LANGUAGES, ROMANCE_WORDS);
+FM.numberLanguageDataGermanic = buildData(GERMANIC_LANGUAGES, GERMANIC_WORDS);
+FM.numberLanguageData = FM.numberLanguageDataRomance;

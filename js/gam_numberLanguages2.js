@@ -1,12 +1,12 @@
-// gam_numberLanguages.js - gameplay for the Number Languages recognition game
+// gam_numberLanguages2.js - gameplay for Germanic Number Languages recognition game
 const FM = (window.FastMath = window.FastMath || {});
-const backend = FM.backendNumberLanguages || {};
-const DATA = FM.numberLanguageDataRomance || FM.numberLanguageData || {};
+const backend2 = FM.backendNumberLanguages2 || {};
+const DATA2 = FM.numberLanguageDataGermanic || {};
 
-const LANGUAGES = DATA.LANGUAGES || ["French", "Spanish", "Portuguese", "Italian"];
-const WORDS = DATA.WORDS || {};
-const COLLISIONS = DATA.COLLISIONS || {};
-const NUMBER_ORDER = DATA.NUMBERS || Array.from({ length: 100 }, (_, i) => i + 1);
+const LANGUAGES = DATA2.LANGUAGES || ["Dutch", "German", "Swedish", "Norwegian"];
+const WORDS = DATA2.WORDS || {};
+const COLLISIONS = DATA2.COLLISIONS || {};
+const NUMBER_ORDER = DATA2.NUMBERS || Array.from({ length: 100 }, (_, i) => i + 1);
 
 const questionEl = document.getElementById("question");
 const numberLabel = document.getElementById("numberLabel");
@@ -158,7 +158,7 @@ function renderAnswersTable() {
 
 async function saveResults(totalTimeSec) {
   const auth = FM.auth || {};
-  const userId = backend.safeUserId ? backend.safeUserId(window.currentUserId) : null;
+  const userId = backend2.safeUserId ? backend2.safeUserId(window.currentUserId) : null;
   const sessionPayload = {
     player_name: auth.playerName || "Player",
     user_id: userId,
@@ -170,7 +170,7 @@ async function saveResults(totalTimeSec) {
   };
 
   try {
-    const sessionRow = await backend.insertSessionRow(sessionPayload);
+    const sessionRow = await backend2.insertSessionRow(sessionPayload);
     sessionId = sessionRow?.session_id || null;
     sessionIdEl.textContent = sessionId ? `Session ID: ${sessionId}` : "";
 
@@ -188,10 +188,10 @@ async function saveResults(totalTimeSec) {
     }));
 
     if (rows.length) {
-      await backend.insertQuestionRows(rows);
+      await backend2.insertQuestionRows(rows);
     }
 
-    await backend.insertLeaderboardRow({
+    await backend2.insertLeaderboardRow({
       player_name: auth.playerName || "Player",
       numbers_correct: correctCount,
       total_time_seconds: totalTimeSec,
@@ -230,10 +230,11 @@ function finishGame(options = {}) {
   if (showAnswersBtn) {
     showAnswersBtn.textContent = "Show Answers";
     showAnswersBtn.classList.remove("active");
+    showAnswersBtn.style.display = "inline-block";
   }
 
   saveResults(totalTimeSec);
-  backend.loadLeaderboard(scopeFilter, timeFilter, true);
+  backend2.loadLeaderboard(scopeFilter, timeFilter, true);
 }
 
 function highlightSelections(selectedLanguage) {
@@ -299,7 +300,7 @@ function showLeaderboardOnly() {
     showAnswersBtn.style.display = "none";
   }
   if (restartBtn) restartBtn.textContent = "Play";
-  backend.loadLeaderboard(scopeFilter, timeFilter, true);
+  backend2.loadLeaderboard(scopeFilter, timeFilter, true);
 }
 
 function startGame() {
@@ -348,13 +349,13 @@ function bindEvents() {
     lbMonthlyBtn.classList.add("active");
     lbAllTimeBtn?.classList.remove("active");
     timeFilter = "monthly";
-    backend.loadLeaderboard(scopeFilter, timeFilter, true);
+    backend2.loadLeaderboard(scopeFilter, timeFilter, true);
   });
   if (lbAllTimeBtn) lbAllTimeBtn.addEventListener("click", () => {
     lbAllTimeBtn.classList.add("active");
     lbMonthlyBtn?.classList.remove("active");
     timeFilter = "alltime";
-    backend.loadLeaderboard(scopeFilter, timeFilter, true);
+    backend2.loadLeaderboard(scopeFilter, timeFilter, true);
   });
 
   if (viewAllBtn) viewAllBtn.addEventListener("click", () => {
@@ -362,21 +363,21 @@ function bindEvents() {
     viewStudentsBtn?.classList.remove("active");
     viewTeachersBtn?.classList.remove("active");
     scopeFilter = "all";
-    backend.loadLeaderboard(scopeFilter, timeFilter, true);
+    backend2.loadLeaderboard(scopeFilter, timeFilter, true);
   });
   if (viewStudentsBtn) viewStudentsBtn.addEventListener("click", () => {
     viewStudentsBtn.classList.add("active");
     viewAllBtn?.classList.remove("active");
     viewTeachersBtn?.classList.remove("active");
     scopeFilter = "students";
-    backend.loadLeaderboard(scopeFilter, timeFilter, true);
+    backend2.loadLeaderboard(scopeFilter, timeFilter, true);
   });
   if (viewTeachersBtn) viewTeachersBtn.addEventListener("click", () => {
     viewTeachersBtn.classList.add("active");
     viewStudentsBtn?.classList.remove("active");
     viewAllBtn?.classList.remove("active");
     scopeFilter = "teachers";
-    backend.loadLeaderboard(scopeFilter, timeFilter, true);
+    backend2.loadLeaderboard(scopeFilter, timeFilter, true);
   });
 
   if (giveUpBtn) giveUpBtn.addEventListener("click", handleGiveUp);
@@ -396,7 +397,7 @@ function bindEvents() {
 
 bindEvents();
 
-FM.numberLanguagesGame = {
+FM.numberLanguagesGame2 = {
   startGame,
   showLeaderboardOnly
 };
