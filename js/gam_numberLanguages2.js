@@ -49,6 +49,7 @@ let currentQuestion = null;
 let totalQuestions = NUMBER_ORDER.length;
 let answersVisible = false;
 let acceptingAnswers = false;
+const REVEAL_DELAY_MS = 1000;
 
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -89,16 +90,16 @@ function pickLanguage() {
 
 function buildOptions(number, correctLanguage) {
   const collisionGroup = new Set(getCollisionGroup(number, correctLanguage));
-  const choices = [correctLanguage];
-  const candidates = LANGUAGES.filter((lang) => lang !== correctLanguage && !collisionGroup.has(lang));
-  shuffle(candidates);
-  while (choices.length < 4 && candidates.length) {
-    choices.push(candidates.shift());
-  }
-  if (choices.length < 4) {
-    console.warn("Not enough non-collision languages; options will repeat collision rule.");
-  }
-  return shuffle(choices);
+  const ordered = [];
+  LANGUAGES.forEach((lang) => {
+    if (lang === correctLanguage) ordered.push(lang);
+  });
+  LANGUAGES.forEach((lang) => {
+    if (lang !== correctLanguage && !collisionGroup.has(lang) && ordered.length < 4) {
+      ordered.push(lang);
+    }
+  });
+  return ordered.slice(0, 4);
 }
 
 function renderOptions(options) {
@@ -272,9 +273,9 @@ function handleGuess(selectedLanguage) {
   setFeedback(correct ? "Correct!" : `It's ${currentQuestion.language}.`, correct);
 
   if (questionIndex >= totalQuestions) {
-    setTimeout(() => finishGame(), 280);
+    setTimeout(() => finishGame(), REVEAL_DELAY_MS);
   } else {
-    setTimeout(() => showQuestion(), 280);
+    setTimeout(() => showQuestion(), REVEAL_DELAY_MS);
   }
 }
 
