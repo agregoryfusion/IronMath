@@ -856,3 +856,15 @@ h1{margin:18px 0 6px;color:var(--accent)}
   text-align:center;
   width:100%;
 }
+
+/* Classwork status line */
+.classwork-status{
+  margin:6px 0 4px;
+  font-weight:700;
+}
+.classwork-pass{
+  color:#7fdca2;
+}
+.classwork-neutral{
+  color:#e3e7ef;
+}

@@ -203,6 +203,30 @@ async function insertQuestionRows(rows) {
   if (error) throw error;
 }
 
+async function fetchPlayerScores(playerName, limit = 40) {
+  if (!playerName) return [];
+  try {
+    const { data, error } = await supabase
+      .from(TABLES.leaderboard)
+      .select("questions_answered")
+      .ilike("player_name", playerName)
+      .order("date_added", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("Player score fetch failed:", error);
+      return [];
+    }
+
+    return (data || [])
+      .map(r => Number(r.questions_answered))
+      .filter(n => Number.isFinite(n) && n > 0);
+  } catch (e) {
+    console.error("Player score fetch exception:", e);
+    return [];
+  }
+}
+
 function updateCachedLeaderboardWithNewScore(newEntry) {
   if (!newEntry?.playerName) return;
   const key = (newEntry.playerName || "").trim().toLowerCase();
@@ -284,5 +308,6 @@ FM.backendFactoring = {
   updateCachedLeaderboardWithNewScore,
   getEmperorTopStudent,
   getTopByRole,
-  safeUserId
+  safeUserId,
+  fetchPlayerScores
 };

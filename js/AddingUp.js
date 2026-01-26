@@ -12,12 +12,18 @@ const stageInfo = document.getElementById("stage-info");
 const timerFill = document.getElementById("timerFill");
 const restartBtn = document.getElementById("restartBtn");
 const lbWrap = document.getElementById("leaderboardContainer");
+const classworkStatusEl = document.getElementById("classwork-status");
 
 const TIMER_SECONDS = 10;
 const PENALTY_MULT = 2;
 const START_MEAN = 5;
 const START_STD = 2;
 const ENABLE_TOWER_ANIMATION = false;
+const CLASSWORK_RULES = {
+  topCount: 5,
+  percentOfAnchor: 0.75,
+  minScore: 10
+};
 
 let sessionId = U.buildSessionID ? U.buildSessionID("Player") : "Session";
 let questionCount = 0;
@@ -257,6 +263,36 @@ function shake(el, mult = 1) {
   })();
 }
 
+function setClassworkStatus(text, isPass = false) {
+  if (!classworkStatusEl) return;
+  classworkStatusEl.textContent = text;
+  classworkStatusEl.className = `classwork-status ${isPass ? "classwork-pass" : "classwork-neutral"}`;
+}
+
+async function evaluateClasswork(runScore) {
+  if (!classworkStatusEl) return;
+  const playerName = (FM.auth && FM.auth.playerName ? FM.auth.playerName : "").trim();
+  if (!playerName) {
+    setClassworkStatus("Sign in to track classwork scores.", false);
+    return;
+  }
+  setClassworkStatus("Checking classwork threshold...", false);
+  try {
+    const history = backend.fetchPlayerScores ? await backend.fetchPlayerScores(playerName) : [];
+    const threshold = U.computeEffortThreshold
+      ? U.computeEffortThreshold(history, CLASSWORK_RULES)
+      : CLASSWORK_RULES.minScore;
+    if (runScore >= threshold) {
+      setClassworkStatus("This counts for daily classwork", true);
+    } else {
+      setClassworkStatus(`A score of ${threshold} is required to count for classwork`, false);
+    }
+  } catch (e) {
+    console.error("Classwork evaluation failed", e);
+    setClassworkStatus("Classwork check unavailable", false);
+  }
+}
+
 function resetRunState() {
   const auth = FM.auth || { playerName: "Player" };
   sessionId = U.buildSessionID ? U.buildSessionID(auth.playerName || "Player") : "Session";
@@ -422,6 +458,7 @@ function gameOver() {
   document.getElementById("end-total").innerHTML = `Total time: ${totalTrue.toFixed(2)} s (<span id="end-with-penalty">${totalWithPen.toFixed(2)}</span> s with penalties)`;
   document.getElementById("end-avg").innerHTML = `Avg time/question: ${avgTrue.toFixed(2)} s (<span id="end-avg-with-penalty">${avgPen.toFixed(2)}</span> s with penalties)`;
 
+  evaluateClasswork(correctCount);
   uploadSession(totalTrue);
 
   if (restartBtn) restartBtn.textContent = "Play Again";

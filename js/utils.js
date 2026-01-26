@@ -62,13 +62,36 @@ function sampleTrunc(minV,maxV,mu,sigma){
   return Math.min(Math.max(mu,minV),maxV);
 }
 
+// Compute a "counts for classwork" threshold from a player's past scores.
+// Uses the median of the top N scores so a single lucky run does not raise the bar too high.
+function computeEffortThreshold(scores, opts = {}){
+  const {
+    topCount = 5,
+    percentOfAnchor = 0.75,
+    minScore = 10
+  } = opts;
+
+  const cleaned = (scores || [])
+    .map(Number)
+    .filter(n => Number.isFinite(n) && n > 0)
+    .sort((a,b)=>b-a);
+
+  if(cleaned.length === 0) return minScore;
+
+  const anchorList = cleaned.slice(0, topCount);
+  const median = anchorList[Math.floor((anchorList.length - 1) / 2)] || minScore;
+  const target = Math.round(median * percentOfAnchor);
+  return Math.max(minScore, target);
+}
+
 FM.utils = {
   cap,
   parseEmailToName,
   escapeHtml,
   buildSessionID,
   randn,
-  sampleTrunc
+  sampleTrunc,
+  computeEffortThreshold
 };
 
 // Set version text — robust to DOM timing

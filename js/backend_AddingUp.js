@@ -205,6 +205,30 @@ async function insertQuestionRows(rows) {
   return true;
 }
 
+async function fetchPlayerScores(playerName, limit = 40) {
+  if (!playerName) return [];
+  try {
+    const { data, error } = await supabase
+      .from(TABLES.leaderboard)
+      .select("questions_answered")
+      .ilike("player_name", playerName)
+      .order("date_added", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("Player score fetch failed:", error);
+      return [];
+    }
+
+    return (data || [])
+      .map(r => Number(r.questions_answered))
+      .filter(n => Number.isFinite(n) && n > 0);
+  } catch (e) {
+    console.error("Player score fetch exception:", e);
+    return [];
+  }
+}
+
 // Optional: fetch cached questions for analytics pages
 let cachedQuestions = null;
 let cachedQuestionsFetchTime = 0;
@@ -246,5 +270,6 @@ FM.backendAddingUp = {
   insertLeaderboardRow,
   insertSessionRow,
   insertQuestionRows,
-  fetchAndCacheQuestions
+  fetchAndCacheQuestions,
+  fetchPlayerScores
 };

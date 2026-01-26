@@ -14,6 +14,7 @@ const timerFill = document.getElementById("timerFill");
 const restartBtn = document.getElementById("restartBtn");
 const lbWrap = document.getElementById("leaderboardContainer");
 const lbStatus = document.getElementById("leaderboardStatus");
+const classworkStatusEl = document.getElementById("classwork-status");
 
 // Constants
 const SIGMA_SCALE = 6;
@@ -24,6 +25,11 @@ const START_STAGE = 8;
 const TIMER_SECONDS = 10;
 const DUPLICATE_PROTECTION = 25;
 const PENALTY_MULT = 2;
+const CLASSWORK_RULES = {
+  topCount: 5,
+  percentOfAnchor: 0.75,
+  minScore: 10
+};
 
 // State
 let sessionId = U.buildSessionID ? U.buildSessionID("Player") : "Session";
@@ -121,6 +127,36 @@ function shake(el, mult=1){
       el.style.transform='translate(0,0)';
     }
   })();
+}
+
+function setClassworkStatus(text, isPass = false){
+  if(!classworkStatusEl) return;
+  classworkStatusEl.textContent = text;
+  classworkStatusEl.className = `classwork-status ${isPass ? "classwork-pass" : "classwork-neutral"}`;
+}
+
+async function evaluateClasswork(runScore){
+  if(!classworkStatusEl) return;
+  const playerName = (FM.auth && FM.auth.playerName ? FM.auth.playerName : "").trim();
+  if(!playerName){
+    setClassworkStatus("Sign in to track classwork scores.", false);
+    return;
+  }
+  setClassworkStatus("Checking classwork threshold...", false);
+  try{
+    const history = backend.fetchPlayerScores ? await backend.fetchPlayerScores(playerName) : [];
+    const threshold = U.computeEffortThreshold
+      ? U.computeEffortThreshold(history, CLASSWORK_RULES)
+      : CLASSWORK_RULES.minScore;
+    if(runScore >= threshold){
+      setClassworkStatus("This counts for daily classwork", true);
+    }else{
+      setClassworkStatus(`A score of ${threshold} is required to count for classwork`, false);
+    }
+  }catch(e){
+    console.error("Classwork evaluation failed", e);
+    setClassworkStatus("Classwork check unavailable", false);
+  }
 }
 
 function resetRunState() {
@@ -293,6 +329,7 @@ function gameOver(){
   document.getElementById("end-avg").innerHTML =
     `Avg time/question: ${avgTrue.toFixed(2)} s (<span id="end-avg-with-penalty">${avgPen.toFixed(2)}</span> s with penalties)`;
 
+  evaluateClasswork(correctCount);
   uploadSession(totalTrue);
 
   if (restartBtn) restartBtn.textContent = "Play Again";
