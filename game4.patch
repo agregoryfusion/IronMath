@@ -1,0 +1,1510 @@
+diff --git a/index.html b/index.html
+index baa99a0ef1a74d6ca2573d526cc2e11c7a1ded01..3067bb81085c262dfe1cd6520d491299b0bea3d6 100644
+--- a/index.html
++++ b/index.html
+@@ -70,50 +70,61 @@
+           </div>
+         </div>
+ 
+         <div class="app-card" data-field="Math">
+           <div class="app-card-heading">
+             <h3>Adding Up</h3>
+             <span class="pill pill-ghost small-pill">Math</span>
+           </div>
+           <p class="muted">Stack sums that grow harder as you climb the leaderboard.</p>
+           <div class="card-actions">
+             <a class="primary" href="addingup.html">Launch</a>
+           </div>
+         </div>
+ 
+         <div class="app-card" data-field="Math">
+           <div class="app-card-heading">
+             <h3>Factor Sprint</h3>
+             <span class="pill pill-ghost small-pill">Math</span>
+           </div>
+           <p class="muted">Pick every clean divisor before time runs out, with growing factor ranges.</p>
+           <div class="card-actions">
+             <a class="primary" href="factoring.html">Launch</a>
+           </div>
+         </div>
+ 
++        <div class="app-card" data-field="Math">
++          <div class="app-card-heading">
++            <h3>Variable Isolator</h3>
++            <span class="pill pill-ghost small-pill">Math</span>
++          </div>
++          <p class="muted">Drag the right operation to isolate X, then solve one- and two-step equations.</p>
++          <div class="card-actions">
++            <a class="primary" href="isolatingvariables.html">Launch</a>
++          </div>
++        </div>
++
+         <div class="app-card" data-field="Geography">
+           <div class="app-card-heading">
+             <h3>State Capitals</h3>
+             <span class="pill pill-ghost small-pill">Geography</span>
+           </div>
+           <p class="muted">Sprint through all 50 states and see how many capitals you can name the fastest.</p>
+           <div class="card-actions">
+             <a class="primary" href="statecapitals.html">Launch</a>
+           </div>
+         </div>
+ 
+         <div class="app-card" data-field="Geography">
+           <div class="app-card-heading">
+             <h3>World Capitals</h3>
+             <span class="pill pill-ghost small-pill">Geography</span>
+           </div>
+           <p class="muted">Shuffle continents, answer every capital once, and skip a continent if you must.</p>
+           <div class="card-actions">
+             <a class="primary" href="worldcapitals.html">Launch</a>
+           </div>
+         </div>
+ 
+         <div class="app-card" data-field="Language">
+           <div class="app-card-heading">
+             <h3>Number Languages (Romance)</h3>
+diff --git a/isolatingvariables.html b/isolatingvariables.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..6c1d1eb41fcec611c933acbf503c01ac51e089db
+--- /dev/null
++++ b/isolatingvariables.html
+@@ -0,0 +1,109 @@
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="UTF-8" />
++  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
++  <title>Variable Isolator</title>
++
++  <link rel="stylesheet" href="styles.css" />
++
++  <!-- Supabase JS (v2) for backend/leaderboard -->
++  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
++</head>
++<body>
++  <div class="game-topbar">
++    <a class="back-link" href="index.html">← Apps</a>
++    <span class="pill pill-ghost" id="version"></span>
++  </div>
++
++  <h1>Variable Isolator</h1>
++
++  <div id="loading-screen">
++    <div class="loader"></div>
++    <p class="muted">Loading Fun</p>
++  </div>
++
++  <div id="emperor-screen">
++    <h2 class="emp-line">The Monthly Equation Ace</h2>
++    <h2 class="emp-line">Of Variables Is:</h2>
++    <h1 id="emperorName" class="emp-name">...</h1>
++
++    <h2 class="emp-line">With A Score Of:</h2>
++    <h1 id="emperorScore" class="emp-score">...</h1>
++
++    <div class="emp-buttons">
++      <button id="playBtn">Play</button>
++      <button id="viewLeaderboardBtn" class="ghost-btn">View Leaderboard</button>
++    </div>
++  </div>
++
++  <div id="game-container" class="equation-game">
++    <div class="equation-header">
++      <div id="stage-info" class="pill pill-ghost">Round 1</div>
++      <div id="question-count" class="pill pill-ghost">Question 1</div>
++    </div>
++
++    <div id="equation" class="equation-display">X - 4 = 8</div>
++    <p class="muted small" id="stepPrompt">Drag the step that isolates X.</p>
++    <div id="timerBar"><div id="timerFill"></div></div>
++
++    <div id="operation-list" class="operation-list"></div>
++
++    <div id="step-dropzone" class="step-dropzone">
++      <span>Drop the correct step here</span>
++    </div>
++
++    <p id="step-status" class="muted small"></p>
++
++    <div id="final-answer" class="final-answer hidden">
++      <label for="finalInput">X =</label>
++      <input id="finalInput" type="text" autocomplete="off" inputmode="numeric" />
++      <button id="submitAnswer" class="primary-btn">Submit</button>
++    </div>
++  </div>
++
++  <div id="end-screen">
++    <h3>Game Over</h3>
++
++    <p id="end-questions">Questions answered: ...</p>
++    <p id="end-penalty">Total penalty time: ... s</p>
++    <p id="end-total">Total time: ... s (<span id="end-with-penalty">...</span> s with penalties)</p>
++    <p id="end-avg">Avg time/question: ... s (<span id="end-avg-with-penalty">...</span> s with penalties)</p>
++    <p id="classwork-status" class="classwork-status muted"></p>
++
++    <p id="session-id"></p>
++    <p id="saved-status"></p>
++
++    <button id="restartBtn">Play Again</button>
++    <div id="leaderboardTimeButtons">
++      <button id="lbMonthlyBtn" class="active">Monthly</button>
++      <button id="lbAllTimeBtn">All-Time</button>
++    </div>
++
++    <div id="leaderboardButtons">
++      <button id="viewAllBtn">Everyone</button>
++      <button id="viewStudentsBtn">Students</button>
++      <button id="viewTeachersBtn">Teachers</button>
++    </div>
++
++    <div id="leaderboardContainer">
++      <p id="leaderboardStatus"></p>
++      <table>
++        <thead>
++          <tr>
++            <th>#</th>
++            <th>Player</th>
++            <th>Questions</th>
++            <th>Time (s)</th>
++            <th>Time Per Question (s)</th>
++            <th>Date</th>
++          </tr>
++        </thead>
++        <tbody></tbody>
++      </table>
++    </div>
++  </div>
++
++  <script type="module" src="js/auth_IsolatingVariables.js"></script>
++</body>
++</html>
+diff --git a/js/IsolatingVariablesGame.js b/js/IsolatingVariablesGame.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..7a91b1112f3c1bf7fb676ddf16d2bfe18c7f2adb
+--- /dev/null
++++ b/js/IsolatingVariablesGame.js
+@@ -0,0 +1,574 @@
++// IsolatingVariablesGame.js - Variable Isolator game logic
++const FM = (window.FastMath = window.FastMath || {});
++const U = FM.utils || {};
++const backend = FM.backendIsolatingVariables || {};
++
++const gameContainer = document.getElementById("game-container");
++const endScreen = document.getElementById("end-screen");
++const emperorScreen = document.getElementById("emperor-screen");
++const equationEl = document.getElementById("equation");
++const operationListEl = document.getElementById("operation-list");
++const dropZone = document.getElementById("step-dropzone");
++const statusEl = document.getElementById("step-status");
++const stageInfo = document.getElementById("stage-info");
++const questionCountEl = document.getElementById("question-count");
++const timerFill = document.getElementById("timerFill");
++const finalAnswerWrap = document.getElementById("final-answer");
++const finalInput = document.getElementById("finalInput");
++const submitAnswerBtn = document.getElementById("submitAnswer");
++const restartBtn = document.getElementById("restartBtn");
++const lbWrap = document.getElementById("leaderboardContainer");
++const classworkStatusEl = document.getElementById("classwork-status");
++
++const CONFIG = {
++  totalQuestions: 10,
++  timerSeconds: 22,
++  wrongPenaltySeconds: 3,
++  oneStepChance: 0.4,
++  minCoeff: 2,
++  maxCoeff: 9,
++  minValue: 2,
++  maxValue: 12,
++  maxAttempts: 25
++};
++
++const CLASSWORK_RULES = {
++  topCount: 5,
++  percentOfAnchor: 0.75,
++  minScore: 8
++};
++
++let sessionId = U.buildSessionID ? U.buildSessionID("Player") : "Session";
++let questionIndex = 0;
++let correctCount = 0;
++let totalTimeTrue = 0;
++let penaltySeconds = 0;
++let timeLeft = CONFIG.timerSeconds;
++let rafId = 0;
++let qStartTs = 0;
++let mistakesThisQuestion = 0;
++let leaderboardOnlyMode = false;
++let currentQuestion = null;
++let expectedOperation = null;
++let currentStep = 1;
++
++let runData = { sessionID: "", results: [] };
++
++function shuffle(list) {
++  for (let i = list.length - 1; i > 0; i -= 1) {
++    const j = Math.floor(Math.random() * (i + 1));
++    [list[i], list[j]] = [list[j], list[i]];
++  }
++  return list;
++}
++
++function formatEquation(a, sign, b, c) {
++  const coeff = a === 1 ? "" : a;
++  const op = sign === "+" ? "+" : "-";
++  return `${coeff}X ${op} ${b} = ${c}`;
++}
++
++function opLabel(op) {
++  if (!op) return "";
++  const value = Math.abs(op.value);
++  switch (op.type) {
++    case "add":
++      return `Add ${value}`;
++    case "subtract":
++      return `Subtract ${value}`;
++    case "multiply":
++      return `Multiply by ${value}`;
++    case "divide":
++      return `Divide by ${value}`;
++    default:
++      return "";
++  }
++}
++
++function buildOperations(values) {
++  const ops = [];
++  values.forEach((val) => {
++    ops.push({ type: "add", value: val });
++    ops.push({ type: "subtract", value: val });
++    ops.push({ type: "multiply", value: val });
++    ops.push({ type: "divide", value: val });
++  });
++  return shuffle(ops);
++}
++
++function renderOperations(values) {
++  if (!operationListEl) return;
++  operationListEl.innerHTML = "";
++  const operations = buildOperations(values);
++  operations.forEach((op) => {
++    const btn = document.createElement("button");
++    btn.className = "operation-card";
++    btn.textContent = opLabel(op);
++    btn.type = "button";
++    btn.draggable = true;
++    btn.dataset.operation = `${op.type}|${op.value}`;
++    btn.addEventListener("dragstart", (event) => {
++      event.dataTransfer.setData("text/plain", btn.dataset.operation || "");
++    });
++    btn.addEventListener("click", () => {
++      handleOperationSelection(op);
++    });
++    operationListEl.appendChild(btn);
++  });
++}
++
++function parseOperation(raw) {
++  if (!raw) return null;
++  const [type, value] = raw.split("|");
++  const parsed = Number(value);
++  if (!type || Number.isNaN(parsed)) return null;
++  return { type, value: parsed };
++}
++
++function isCorrectOperation(selected, expected) {
++  if (!selected || !expected) return false;
++  return selected.type === expected.type && Number(selected.value) === Number(expected.value);
++}
++
++function setStatus(message, isGood = false) {
++  if (!statusEl) return;
++  statusEl.textContent = message;
++  statusEl.className = `muted small ${isGood ? "status-good" : "status-bad"}`;
++}
++
++function clearStatus() {
++  if (!statusEl) return;
++  statusEl.textContent = "";
++  statusEl.className = "muted small";
++}
++
++function updateHud() {
++  if (stageInfo) stageInfo.textContent = `Round ${Math.max(1, questionIndex + 1)}`;
++  if (questionCountEl) questionCountEl.textContent = `Question ${Math.min(questionIndex + 1, CONFIG.totalQuestions)} of ${CONFIG.totalQuestions}`;
++}
++
++function showFinalAnswerInput() {
++  if (!finalAnswerWrap) return;
++  finalAnswerWrap.classList.remove("hidden");
++  if (finalInput) {
++    finalInput.value = "";
++    finalInput.focus();
++  }
++}
++
++function hideFinalAnswerInput() {
++  if (!finalAnswerWrap) return;
++  finalAnswerWrap.classList.add("hidden");
++}
++
++function resetTimer() {
++  timeLeft = CONFIG.timerSeconds;
++  if (timerFill) timerFill.style.width = "100%";
++  if (rafId) cancelAnimationFrame(rafId);
++  qStartTs = performance.now();
++  rafId = requestAnimationFrame(updateTimer);
++}
++
++function updateTimer(now) {
++  const elapsed = (now - qStartTs) / 1000;
++  timeLeft = Math.max(0, CONFIG.timerSeconds - elapsed);
++  if (timerFill) {
++    const pct = Math.max(0, Math.min(100, (timeLeft / CONFIG.timerSeconds) * 100));
++    timerFill.style.width = `${pct}%`;
++  }
++  if (timeLeft <= 0) {
++    handleTimeout();
++    return;
++  }
++  rafId = requestAnimationFrame(updateTimer);
++}
++
++function stopTimer() {
++  if (rafId) cancelAnimationFrame(rafId);
++  rafId = 0;
++}
++
++function handleTimeout() {
++  stopTimer();
++  penaltySeconds += CONFIG.wrongPenaltySeconds;
++  finalizeQuestion(false, "Time expired");
++}
++
++function setClassworkStatus(text, isPass = false) {
++  if (!classworkStatusEl) return;
++  classworkStatusEl.textContent = text;
++  classworkStatusEl.className = `classwork-status ${isPass ? "classwork-pass" : "classwork-neutral"}`;
++}
++
++async function evaluateClasswork(runScore) {
++  if (!classworkStatusEl) return;
++  const playerName = (FM.auth && FM.auth.playerName ? FM.auth.playerName : "").trim();
++  if (!playerName) {
++    setClassworkStatus("Sign in to track classwork scores.", false);
++    return;
++  }
++  setClassworkStatus("Checking classwork threshold...", false);
++  try {
++    const history = backend.fetchPlayerScores ? await backend.fetchPlayerScores(playerName) : [];
++    const threshold = U.computeEffortThreshold
++      ? U.computeEffortThreshold(history, CLASSWORK_RULES)
++      : CLASSWORK_RULES.minScore;
++    if (runScore >= threshold) {
++      setClassworkStatus("This counts for daily classwork", true);
++    } else {
++      setClassworkStatus(`A score of ${threshold} is required to count for classwork`, false);
++    }
++  } catch (e) {
++    console.error("Classwork evaluation failed", e);
++    setClassworkStatus("Classwork check unavailable", false);
++  }
++}
++
++function buildQuestion() {
++  let attempt = 0;
++  while (attempt < CONFIG.maxAttempts) {
++    attempt += 1;
++    const isOneStep = Math.random() < CONFIG.oneStepChance;
++    const a = isOneStep ? 1 : (CONFIG.minCoeff + Math.floor(Math.random() * (CONFIG.maxCoeff - CONFIG.minCoeff + 1)));
++    const b = CONFIG.minValue + Math.floor(Math.random() * (CONFIG.maxValue - CONFIG.minValue + 1));
++    const x = CONFIG.minValue + Math.floor(Math.random() * (CONFIG.maxValue - CONFIG.minValue + 1));
++    const sign = Math.random() < 0.5 ? "+" : "-";
++    const c = sign === "+" ? (a * x + b) : (a * x - b);
++
++    if (c <= 0) continue;
++
++    const equation = formatEquation(a, sign, b, c);
++    const step1Operation = sign === "+" ? { type: "subtract", value: b } : { type: "add", value: b };
++    const afterFirst = sign === "+" ? c - b : c + b;
++
++    if (afterFirst <= 0) continue;
++
++    return {
++      a,
++      b,
++      c,
++      sign,
++      x,
++      equation,
++      stepCount: a === 1 ? 1 : 2,
++      step1Operation,
++      step2Operation: a === 1 ? null : { type: "divide", value: a },
++      afterFirst
++    };
++  }
++
++  return {
++    a: 1,
++    b: 4,
++    c: 8,
++    sign: "-",
++    x: 12,
++    equation: "X - 4 = 8",
++    stepCount: 1,
++    step1Operation: { type: "add", value: 4 },
++    step2Operation: null,
++    afterFirst: 12
++  };
++}
++
++function renderQuestion(question) {
++  currentQuestion = {
++    ...question,
++    stepsTaken: [],
++    correctSteps: [opLabel(question.step1Operation)]
++  };
++  if (question.step2Operation) {
++    currentQuestion.correctSteps.push(opLabel(question.step2Operation));
++  }
++  if (equationEl) equationEl.textContent = question.equation;
++  clearStatus();
++  hideFinalAnswerInput();
++  currentStep = 1;
++  expectedOperation = question.step1Operation;
++  renderOperations([question.a, question.b, question.c]);
++  resetTimer();
++}
++
++function handleOperationSelection(operation) {
++  if (!currentQuestion) return;
++  if (currentStep === "answer") return;
++
++  currentQuestion.stepsTaken.push(opLabel(operation));
++
++  if (isCorrectOperation(operation, expectedOperation)) {
++    if (currentStep === 1) {
++      setStatus("Nice! Now simplify the equation.", true);
++      const afterFirst = currentQuestion.afterFirst;
++      if (currentQuestion.stepCount === 1) {
++        if (equationEl) equationEl.textContent = `X = ${afterFirst}`;
++        currentStep = "answer";
++        expectedOperation = null;
++        showFinalAnswerInput();
++        return;
++      }
++
++      if (equationEl) equationEl.textContent = `${currentQuestion.a}X = ${afterFirst}`;
++      currentStep = 2;
++      expectedOperation = currentQuestion.step2Operation;
++      renderOperations([currentQuestion.a, afterFirst]);
++      return;
++    }
++
++    if (currentStep === 2) {
++      setStatus("Great! Solve for X.", true);
++      if (equationEl) equationEl.textContent = `X = ${currentQuestion.x}`;
++      currentStep = "answer";
++      expectedOperation = null;
++      showFinalAnswerInput();
++    }
++    return;
++  }
++
++  mistakesThisQuestion += 1;
++  penaltySeconds += CONFIG.wrongPenaltySeconds;
++  if (dropZone) dropZone.classList.add("shake");
++  setStatus("Try again — that step doesn’t isolate X.", false);
++  setTimeout(() => dropZone?.classList.remove("shake"), 300);
++}
++
++function handleAnswerSubmit() {
++  if (!currentQuestion) return;
++  if (currentStep !== "answer") return;
++  const raw = finalInput ? finalInput.value.trim() : "";
++  if (!raw) {
++    setStatus("Enter a value for X.", false);
++    return;
++  }
++  const parsed = Number(raw);
++  if (Number.isNaN(parsed)) {
++    setStatus("That answer isn’t a number.", false);
++    return;
++  }
++  if (parsed === currentQuestion.x) {
++    setStatus("Correct!", true);
++    finalizeQuestion(true);
++  } else {
++    mistakesThisQuestion += 1;
++    penaltySeconds += CONFIG.wrongPenaltySeconds;
++    setStatus("Not quite — check your arithmetic.", false);
++  }
++}
++
++function finalizeQuestion(success, reason = "") {
++  stopTimer();
++  const timeTaken = (performance.now() - qStartTs) / 1000;
++  totalTimeTrue += timeTaken;
++
++  runData.results.push({
++    questionNumber: questionIndex + 1,
++    equation: currentQuestion?.equation || "",
++    stepCount: currentQuestion?.stepCount || 0,
++    stepsTaken: currentQuestion?.stepsTaken || [],
++    correctSteps: currentQuestion?.correctSteps || [],
++    solution: currentQuestion?.x ?? null,
++    timeTaken,
++    mistakes: mistakesThisQuestion,
++    success,
++    reason
++  });
++
++  if (success) correctCount += 1;
++  questionIndex += 1;
++  mistakesThisQuestion = 0;
++
++  if (questionIndex >= CONFIG.totalQuestions) {
++    endGame();
++  } else {
++    renderQuestion(buildQuestion());
++    updateHud();
++  }
++}
++
++async function endGame() {
++  stopTimer();
++
++  if (gameContainer) gameContainer.style.display = "none";
++  if (endScreen) endScreen.style.display = "block";
++  if (lbWrap) lbWrap.style.display = "block";
++
++  backend.loadLeaderboard("all", "monthly", true);
++
++  const totalTrue = totalTimeTrue;
++  const totalWithPen = totalTimeTrue + penaltySeconds;
++  const avgTrue = totalTrue / Math.max(correctCount, 1);
++  const avgPen = totalWithPen / Math.max(correctCount, 1);
++
++  document.getElementById("end-questions").textContent =
++    `Questions answered: ${correctCount}`;
++  document.getElementById("end-penalty").textContent =
++    `Total penalty time: ${penaltySeconds.toFixed(2)} s`;
++  document.getElementById("end-total").innerHTML =
++    `Total time: ${totalTrue.toFixed(2)} s (<span id="end-with-penalty">${totalWithPen.toFixed(2)}</span> s with penalties)`;
++  document.getElementById("end-avg").innerHTML =
++    `Avg time/question: ${avgTrue.toFixed(2)} s (<span id="end-avg-with-penalty">${avgPen.toFixed(2)}</span> s with penalties)`;
++
++  evaluateClasswork(correctCount);
++  uploadSession(totalTrue);
++
++  if (restartBtn) restartBtn.textContent = "Play Again";
++}
++
++async function uploadSession(totalTrue) {
++  try {
++    const now = new Date();
++    const createdIso = now.toISOString();
++    const totalWithPen = totalTrue + penaltySeconds;
++
++    const auth = FM.auth || { playerName: "Player", isTeacher: false, isStudent: false };
++    const playerName = auth.playerName || "Player";
++
++    const sessionPayload = {
++      user_id: window.currentUserId || null,
++      player_name: playerName,
++      questions_answered: correctCount,
++      total_time_seconds: totalTrue,
++      penalty_time_seconds: penaltySeconds,
++      created_at: createdIso,
++      version_number: FM.GAME_VERSION
++    };
++
++    let sessionNumericId = null;
++    try {
++      const inserted = await backend.insertSessionRow(sessionPayload);
++      sessionNumericId = inserted?.session_id || inserted?.id || null;
++    } catch (se) {
++      console.warn("Session insert failed:", se);
++    }
++
++    const questionsPayload = runData.results.map((q, idx) => ({
++      session_id: sessionNumericId,
++      question_number: q.questionNumber ?? (idx + 1),
++      equation: q.equation,
++      step_count: q.stepCount,
++      steps_taken: (q.stepsTaken || []).join(","),
++      correct_steps: (q.correctSteps || []).join(","),
++      solution: q.solution,
++      time_taken: q.timeTaken,
++      mistakes: q.mistakes,
++      success: q.success,
++      date_added: createdIso,
++      player_name: playerName,
++      version_number: FM.GAME_VERSION
++    }));
++
++    if (questionsPayload.length > 0) {
++      try {
++        await backend.insertQuestionRows(questionsPayload);
++      } catch (qe) {
++        console.error("Questions insert failed:", qe);
++      }
++    }
++
++    if (correctCount > 0) {
++      try {
++        await backend.insertLeaderboardRow({
++          user_id: backend.safeUserId(window.currentUserId) || null,
++          player_name: playerName,
++          questions_answered: correctCount,
++          total_time_seconds: totalWithPen,
++          penalty_time_seconds: penaltySeconds,
++          date_added: createdIso,
++          is_teacher: !!auth.isTeacher,
++          is_student: !!auth.isStudent,
++          version_number: FM.GAME_VERSION
++        });
++      } catch (lbe) {
++        console.warn("Leaderboard insert failed:", lbe);
++      }
++    }
++
++    const cacheEntry = {
++      playerName,
++      questionsAnswered: correctCount,
++      totalTime: totalWithPen,
++      penaltyTime: penaltySeconds,
++      dateAdded: now.getTime(),
++      isTeacher: !!auth.isTeacher,
++      isStudent: !!auth.isStudent
++    };
++    backend.updateCachedLeaderboardWithNewScore?.(cacheEntry);
++
++    const savedStatus = document.getElementById("saved-status");
++    if (savedStatus) savedStatus.textContent = "Saved!";
++  } catch (e) {
++    console.error("Upload session failed:", e);
++    const savedStatus = document.getElementById("saved-status");
++    if (savedStatus) savedStatus.textContent = "Save failed";
++  }
++}
++
++function startGame() {
++  leaderboardOnlyMode = false;
++  runData = { sessionID: sessionId, results: [] };
++  questionIndex = 0;
++  correctCount = 0;
++  totalTimeTrue = 0;
++  penaltySeconds = 0;
++  mistakesThisQuestion = 0;
++
++  if (emperorScreen) emperorScreen.style.display = "none";
++  if (endScreen) endScreen.style.display = "none";
++  if (gameContainer) gameContainer.style.display = "block";
++  if (lbWrap) lbWrap.style.display = "none";
++
++  renderQuestion(buildQuestion());
++  updateHud();
++}
++
++function showLeaderboardOnly() {
++  leaderboardOnlyMode = true;
++  if (emperorScreen) emperorScreen.style.display = "none";
++  if (gameContainer) gameContainer.style.display = "none";
++  if (endScreen) endScreen.style.display = "block";
++  if (lbWrap) lbWrap.style.display = "block";
++  backend.loadLeaderboard("all", "monthly", true);
++
++  document.getElementById("end-questions").textContent = "Questions answered: 0";
++  document.getElementById("end-penalty").textContent = "Total penalty time: 0 s";
++  document.getElementById("end-total").innerHTML = "Total time: 0 s (<span id=\"end-with-penalty\">0</span> s with penalties)";
++  document.getElementById("end-avg").innerHTML = "Avg time/question: 0 s (<span id=\"end-avg-with-penalty\">0</span> s with penalties)";
++}
++
++if (dropZone) {
++  dropZone.addEventListener("dragover", (event) => {
++    event.preventDefault();
++    dropZone.classList.add("drag-over");
++  });
++  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
++  dropZone.addEventListener("drop", (event) => {
++    event.preventDefault();
++    dropZone.classList.remove("drag-over");
++    const op = parseOperation(event.dataTransfer.getData("text/plain"));
++    if (op) handleOperationSelection(op);
++  });
++}
++
++if (submitAnswerBtn) {
++  submitAnswerBtn.addEventListener("click", handleAnswerSubmit);
++}
++
++if (finalInput) {
++  finalInput.addEventListener("keydown", (event) => {
++    if (event.key === "Enter") handleAnswerSubmit();
++  });
++}
++
++if (restartBtn) {
++  restartBtn.addEventListener("click", () => {
++    if (leaderboardOnlyMode && FM.ui?.showEmperor) {
++      FM.ui.showEmperor();
++      return;
++    }
++    startGame();
++  });
++}
++
++FM.variableGame = {
++  startGame,
++  showLeaderboardOnly
++};
+diff --git a/js/auth_IsolatingVariables.js b/js/auth_IsolatingVariables.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..b7e6f45631e9d7ab4d4924af4c0eb01b506bead8
+--- /dev/null
++++ b/js/auth_IsolatingVariables.js
+@@ -0,0 +1,174 @@
++// auth_IsolatingVariables.js - entry point for Variable Isolator
++import "./utils.js";
++import "./backend_main.js";
++import "./backend_IsolatingVariables.js";
++import "./IsolatingVariablesGame.js";
++import "./ui_IsolatingVariables.js";
++
++const FM = (window.FastMath = window.FastMath || {});
++const U = FM.utils;
++const backendMain = FM.backendMain || {};
++const backend = FM.backendIsolatingVariables || {};
++
++const loadingScreen = document.getElementById("loading-screen");
++const emperorScreen = document.getElementById("emperor-screen");
++const emperorName = document.getElementById("emperorName");
++const emperorScore = document.getElementById("emperorScore");
++const playBtn = document.getElementById("playBtn");
++const leaderboardBtn = document.getElementById("viewLeaderboardBtn");
++
++const gameContainer = document.getElementById("game-container");
++const endScreen = document.getElementById("end-screen");
++let unauthorizedScreen = null;
++
++import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
++import {
++  getAuth,
++  setPersistence,
++  browserLocalPersistence,
++  onAuthStateChanged,
++  signOut
++} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
++
++const firebaseConfig = {
++  apiKey: "AIzaSyBUaOrUckCuTrc9MHB9jCF4TUsx-hWFC7g",
++  authDomain: "ironmath-1263b.firebaseapp.com",
++  projectId: "ironmath-1263b",
++  storageBucket: "ironmath-1263b.firebasestorage.app",
++  messagingSenderId: "729878130193",
++  appId: "1:729878130193:web:f4d447b552e4f955f80bb0",
++  measurementId: "G-0VCM7C1HPC"
++};
++
++const app = initializeApp(firebaseConfig);
++const auth = getAuth(app);
++await setPersistence(auth, browserLocalPersistence);
++
++FM.auth = {
++  playerName: "Player",
++  email: "",
++  isTeacher: false,
++  isStudent: false
++};
++
++function showUnauthorized(authInstance, message) {
++  if (unauthorizedScreen) unauthorizedScreen.remove();
++  unauthorizedScreen = document.createElement("div");
++  unauthorizedScreen.className = "panel";
++  unauthorizedScreen.style.maxWidth = "600px";
++  unauthorizedScreen.style.margin = "60px auto";
++  unauthorizedScreen.innerHTML = `
++    <h3>Access Restricted</h3>
++    <p>${message || "Please sign in with your @fusionacademy account to play."}</p>
++    <button id=\"retrySignInBtn\" class=\"primary-btn\">Sign in again</button>
++  `;
++  document.body.appendChild(unauthorizedScreen);
++  if (loadingScreen) loadingScreen.style.display = "none";
++  if (emperorScreen) emperorScreen.style.display = "none";
++  if (gameContainer) gameContainer.style.display = "none";
++  if (endScreen) endScreen.style.display = "none";
++  const retryBtn = unauthorizedScreen.querySelector("#retrySignInBtn");
++  if (retryBtn) {
++    retryBtn.addEventListener("click", async () => {
++      try { await signOut(authInstance); } catch (e) { console.error(e); }
++      if (unauthorizedScreen) unauthorizedScreen.remove();
++      window.location.href = "index.html";
++    });
++  }
++}
++
++function showLoading() {
++  if (loadingScreen) loadingScreen.style.display = "flex";
++  if (emperorScreen) emperorScreen.style.display = "none";
++  if (gameContainer) gameContainer.style.display = "none";
++  if (endScreen) endScreen.style.display = "none";
++}
++
++async function handleSignedIn(user) {
++  const email = user.email?.toLowerCase() || "";
++  let isTeacher = false;
++  let isStudent = false;
++
++  if (email.endsWith("@fusionacademy.com")) {
++    isTeacher = true;
++    isStudent = false;
++  } else if (email.endsWith("@fusionacademy.me")) {
++    isStudent = true;
++    isTeacher = false;
++  }
++
++  const playerName = user.displayName || (U && U.parseEmailToName ? U.parseEmailToName(user.email) : "Player");
++
++  const allowed = email.endsWith("@fusionacademy.com") || email.endsWith("@fusionacademy.me");
++  if (!allowed) {
++    return showUnauthorized(auth, "Please sign in with your @fusionacademy account to play.");
++  }
++
++  FM.auth.playerName = playerName;
++  FM.auth.email = email;
++  FM.auth.isTeacher = isTeacher;
++  FM.auth.isStudent = isStudent;
++
++  showLoading();
++
++  try {
++    const [userId] = await Promise.all([
++      backendMain.recordUserLogin(email, playerName),
++      backend.loadLeaderboard("students", "monthly", true)
++    ]);
++    window.currentUserId = userId;
++  } catch (err) {
++    console.error("Initial load failed:", err);
++  }
++
++  showEmperor();
++}
++
++function showEmperor() {
++  const auth = FM.auth || {};
++  const role = auth.isTeacher ? "teacher" : "student";
++  const top = backend.getTopByRole ? backend.getTopByRole(role) : backend.getEmperorTopStudent();
++  const fallback = (!top && backend.getTopByRole) ? backend.getTopByRole("student") : top;
++  const target = fallback || top;
++  if (target) {
++    emperorName.textContent = target.playerName;
++    emperorScore.textContent = `${target.questionsAnswered} Correct`;
++  } else {
++    emperorName.textContent = "...";
++    emperorScore.textContent = "...";
++  }
++
++  if (loadingScreen) loadingScreen.style.display = "none";
++  if (emperorScreen) emperorScreen.style.display = "block";
++  if (gameContainer) gameContainer.style.display = "none";
++}
++
++FM.ui = { showEmperor };
++
++onAuthStateChanged(auth, async (user) => {
++  if (user) {
++    await handleSignedIn(user);
++  } else {
++    if (emperorScreen) emperorScreen.style.display = "none";
++    if (gameContainer) gameContainer.style.display = "none";
++    if (endScreen) endScreen.style.display = "none";
++    window.location.href = "index.html";
++  }
++});
++
++if (playBtn) {
++  playBtn.addEventListener("click", () => {
++    if (emperorScreen) emperorScreen.style.display = "none";
++    if (FM.variableGame) FM.variableGame.startGame();
++  });
++}
++
++if (leaderboardBtn) {
++  leaderboardBtn.addEventListener("click", () => {
++    if (loadingScreen) loadingScreen.style.display = "none";
++    if (emperorScreen) emperorScreen.style.display = "none";
++    if (FM.variableGame && typeof FM.variableGame.showLeaderboardOnly === "function") {
++      FM.variableGame.showLeaderboardOnly();
++    }
++  });
++}
+diff --git a/js/backend_IsolatingVariables.js b/js/backend_IsolatingVariables.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c7476e2d81455c3c8dded56d6d6496768c0e950
+--- /dev/null
++++ b/js/backend_IsolatingVariables.js
+@@ -0,0 +1,288 @@
++// backend_IsolatingVariables.js - Supabase integration + leaderboard for Variable Isolator
++const FM = (window.FastMath = window.FastMath || {});
++const U = FM.utils || {};
++
++const SUPABASE_URL = "https://jfjlznxvofhjjlommdrd.supabase.co";
++const SUPABASE_ANON_KEY = "sb_publishable_bSFpnR01TewY44SI8mLuLA_aX3bF3Lk";
++
++const supabase = FM.supabaseClient || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
++FM.supabaseClient = supabase;
++
++const lbWrap = document.getElementById("leaderboardContainer");
++const lbStatus = document.getElementById("leaderboardStatus");
++const lbBody = document.querySelector("#leaderboardContainer tbody");
++const viewAllBtn = document.getElementById("viewAllBtn");
++const viewStudentsBtn = document.getElementById("viewStudentsBtn");
++const viewTeachersBtn = document.getElementById("viewTeachersBtn");
++const lbMonthlyBtn = document.getElementById("lbMonthlyBtn");
++const lbAllTimeBtn = document.getElementById("lbAllTimeBtn");
++
++const TABLES = {
++  leaderboard: "isolating_variables_leaderboard",
++  sessions: "isolating_variables_sessions",
++  questions: "isolating_variables_questions"
++};
++
++let cachedAllTimeLeaderboard = null;
++let cachedMonthlyLeaderboard = null;
++let cachedAllTimeFetchTime = 0;
++let cachedMonthlyFetchTime = 0;
++let lastLoadedTimeFilter = "monthly";
++const LEADERBOARD_CACHE_DURATION = 60000;
++
++function safeUserId(raw) {
++  if (!raw || typeof raw !== "string") return null;
++  const trimmed = raw.trim();
++  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
++  return uuidRegex.test(trimmed) ? trimmed : null;
++}
++
++function normalizeLeaderboardRow(row) {
++  if (!row) return null;
++  return {
++    playerName: row.player_name,
++    questionsAnswered: row.questions_answered ?? 0,
++    totalTime: row.total_time_seconds ?? 0,
++    penaltyTime: row.penalty_time_seconds ?? 0,
++    dateAdded: row.date_added ? new Date(row.date_added).getTime() : null,
++    isTeacher: row.is_teacher ?? false,
++    isStudent: row.is_student ?? false
++  };
++}
++
++function renderLeaderboard(rows) {
++  if (!lbBody) return;
++  lbBody.innerHTML = "";
++  if (!rows || rows.length === 0) {
++    if (lbStatus) lbStatus.textContent = "No scores yet.";
++    return;
++  }
++  if (lbStatus) lbStatus.textContent = "";
++
++  const selfKey = (FM.auth && FM.auth.playerName ? FM.auth.playerName : "").trim().toLowerCase();
++
++  rows.forEach((row, idx) => {
++    const rowKey = (row.playerName || "").trim().toLowerCase();
++    const tr = document.createElement("tr");
++    const cell = (value) => {
++      const td = document.createElement("td");
++      td.textContent = value;
++      return td;
++    };
++    if (selfKey && rowKey && rowKey === selfKey) {
++      tr.classList.add("lb-row-self");
++    }
++    tr.appendChild(cell(idx + 1));
++    tr.appendChild(cell(row.playerName || "?"));
++    tr.appendChild(cell(row.questionsAnswered ?? 0));
++    tr.appendChild(cell((row.totalTime ?? 0).toFixed(2)));
++    tr.appendChild(cell(((row.totalTime ?? 0) / Math.max(1, row.questionsAnswered ?? 1)).toFixed(2)));
++    const d = row.dateAdded ? new Date(row.dateAdded) : null;
++    tr.appendChild(cell(d ? d.toLocaleDateString() : "—"));
++    lbBody.appendChild(tr);
++  });
++}
++
++function applyLeaderboardFilter(rows, scope) {
++  if (!rows) return [];
++  if (scope === "teachers") return rows.filter((r) => r.isTeacher);
++  if (scope === "students") return rows.filter((r) => r.isStudent);
++  return rows;
++}
++
++function cacheStillValid(bucket) {
++  const now = Date.now();
++  if (bucket === "alltime") return cachedAllTimeLeaderboard && (now - cachedAllTimeFetchTime) < LEADERBOARD_CACHE_DURATION;
++  return cachedMonthlyLeaderboard && (now - cachedMonthlyFetchTime) < LEADERBOARD_CACHE_DURATION;
++}
++
++function storeLeaderboardInCache(list, bucket) {
++  if (bucket === "alltime") {
++    cachedAllTimeLeaderboard = list;
++    cachedAllTimeFetchTime = Date.now();
++  } else {
++    cachedMonthlyLeaderboard = list;
++    cachedMonthlyFetchTime = Date.now();
++  }
++}
++
++async function loadLeaderboard(scopeFilter = "all", timeFilter = "monthly", forceRefresh = false) {
++  const tf = (typeof timeFilter === "string" && timeFilter.trim().toLowerCase().startsWith("all")) ? "alltime" : "monthly";
++  lastLoadedTimeFilter = tf;
++
++  const cache = tf === "alltime" ? cachedAllTimeLeaderboard : cachedMonthlyLeaderboard;
++  if (!forceRefresh && cacheStillValid(tf)) {
++    const filtered = applyLeaderboardFilter(cache, scopeFilter);
++    renderLeaderboard(filtered);
++    return cache;
++  }
++
++  if (lbStatus) lbStatus.textContent = "Loading leaderboard...";
++
++  let query = supabase
++    .from(TABLES.leaderboard)
++    .select("*")
++    .order("questions_answered", { ascending: false })
++    .order("total_time_seconds", { ascending: true })
++    .limit(500);
++
++  if (tf === "monthly") {
++    const now = new Date();
++    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
++    query = query.gte("date_added", startOfMonth);
++  }
++
++  const { data, error } = await query;
++  if (error) {
++    console.error("Leaderboard fetch failed:", error);
++    if (lbStatus) lbStatus.textContent = "Unable to load leaderboard.";
++    return null;
++  }
++
++  const normalized = (data || [])
++    .filter((r) => !!r.player_name)
++    .map(normalizeLeaderboardRow);
++
++  const grouped = {};
++  for (const row of normalized) {
++    const key = (row.playerName || "").trim().toLowerCase();
++    if (!grouped[key]) grouped[key] = [];
++    grouped[key].push(row);
++  }
++
++  const best = Object.values(grouped).map((list) =>
++    list.sort((a, b) => {
++      if (b.questionsAnswered === a.questionsAnswered) return a.totalTime - b.totalTime;
++      return b.questionsAnswered - a.questionsAnswered;
++    })[0]
++  );
++
++  best.sort((a, b) => {
++    if (b.questionsAnswered === a.questionsAnswered) return a.totalTime - b.totalTime;
++    return b.questionsAnswered - a.questionsAnswered;
++  });
++
++  storeLeaderboardInCache(best, tf);
++  const filtered = applyLeaderboardFilter(best, scopeFilter);
++  renderLeaderboard(filtered);
++  return best;
++}
++
++function getEmperorTopStudent() {
++  const list = lastLoadedTimeFilter === "alltime" ? cachedAllTimeLeaderboard : cachedMonthlyLeaderboard;
++  if (!list || list.length === 0) return null;
++  return list.find((r) => r.isStudent) || list[0];
++}
++
++function getTopByRole(role = "student") {
++  const list = lastLoadedTimeFilter === "alltime" ? cachedAllTimeLeaderboard : cachedMonthlyLeaderboard;
++  if (!list || list.length === 0) return null;
++  if (role === "teacher") {
++    const t = list.find((r) => r.isTeacher);
++    if (t) return t;
++  }
++  const s = list.find((r) => r.isStudent);
++  if (s) return s;
++  return list[0] || null;
++}
++
++async function insertLeaderboardRow(payload) {
++  return await supabase.from(TABLES.leaderboard).insert(payload).select().maybeSingle();
++}
++
++async function insertSessionRow(payload) {
++  const { data, error } = await supabase.from(TABLES.sessions).insert(payload).select().maybeSingle();
++  if (error) throw error;
++  return data;
++}
++
++async function insertQuestionRows(rows) {
++  if (!rows || rows.length === 0) return;
++  const { error } = await supabase.from(TABLES.questions).insert(rows);
++  if (error) throw error;
++}
++
++function updateCachedLeaderboardWithNewScore(entry) {
++  if (!entry) return;
++  const now = Date.now();
++  const target = cachedMonthlyLeaderboard || [];
++  const existingIndex = target.findIndex((row) => (row.playerName || "").toLowerCase() === (entry.playerName || "").toLowerCase());
++  if (existingIndex >= 0) target.splice(existingIndex, 1);
++  target.push(entry);
++  target.sort((a, b) => {
++    if (b.questionsAnswered === a.questionsAnswered) return a.totalTime - b.totalTime;
++    return b.questionsAnswered - a.questionsAnswered;
++  });
++  cachedMonthlyLeaderboard = target;
++  cachedMonthlyFetchTime = now;
++}
++
++async function fetchPlayerScores(playerName) {
++  if (!playerName) return [];
++  const { data, error } = await supabase
++    .from(TABLES.leaderboard)
++    .select("questions_answered, date_added")
++    .eq("player_name", playerName)
++    .order("date_added", { ascending: false })
++    .limit(25);
++  if (error) throw error;
++  return data || [];
++}
++
++if (lbWrap) {
++  lbWrap.style.display = "none";
++}
++
++if (viewAllBtn) {
++  viewAllBtn.addEventListener("click", () => {
++    viewAllBtn.classList.add("active");
++    viewStudentsBtn?.classList.remove("active");
++    viewTeachersBtn?.classList.remove("active");
++    loadLeaderboard("all", lastLoadedTimeFilter, false);
++  });
++}
++
++if (viewStudentsBtn) {
++  viewStudentsBtn.addEventListener("click", () => {
++    viewStudentsBtn.classList.add("active");
++    viewAllBtn?.classList.remove("active");
++    viewTeachersBtn?.classList.remove("active");
++    loadLeaderboard("students", lastLoadedTimeFilter, false);
++  });
++}
++
++if (viewTeachersBtn) {
++  viewTeachersBtn.addEventListener("click", () => {
++    viewTeachersBtn.classList.add("active");
++    viewAllBtn?.classList.remove("active");
++    viewStudentsBtn?.classList.remove("active");
++    loadLeaderboard("teachers", lastLoadedTimeFilter, false);
++  });
++}
++
++if (lbMonthlyBtn) {
++  lbMonthlyBtn.addEventListener("click", () => {
++    lbMonthlyBtn.classList.add("active");
++    lbAllTimeBtn?.classList.remove("active");
++    loadLeaderboard(document.querySelector(".lb-scope-active")?.dataset?.scope || "all", "monthly", true);
++  });
++}
++if (lbAllTimeBtn) {
++  lbAllTimeBtn.addEventListener("click", () => {
++    lbAllTimeBtn.classList.add("active");
++    lbMonthlyBtn?.classList.remove("active");
++    loadLeaderboard(document.querySelector(".lb-scope-active")?.dataset?.scope || "all", "all", true);
++  });
++}
++
++FM.backendIsolatingVariables = {
++  loadLeaderboard,
++  insertLeaderboardRow,
++  insertSessionRow,
++  insertQuestionRows,
++  updateCachedLeaderboardWithNewScore,
++  getEmperorTopStudent,
++  getTopByRole,
++  safeUserId,
++  fetchPlayerScores
++};
+diff --git a/js/ui_IsolatingVariables.js b/js/ui_IsolatingVariables.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..c54f926fdf50ab22c67e3debc4dee79aacfe41fc
+--- /dev/null
++++ b/js/ui_IsolatingVariables.js
+@@ -0,0 +1,84 @@
++const lbMonthlyBtn = document.getElementById("lbMonthlyBtn");
++const lbAllTimeBtn = document.getElementById("lbAllTimeBtn");
++const viewAllBtn = document.getElementById("viewAllBtn");
++const viewStudentsBtn = document.getElementById("viewStudentsBtn");
++const viewTeachersBtn = document.getElementById("viewTeachersBtn");
++const FM = (window.FastMath = window.FastMath || {});
++const backend = FM.backendIsolatingVariables || {};
++
++let currentScope = "all";
++let currentTime = "monthly";
++
++function highlightTimeButton(time) {
++  if (!lbMonthlyBtn && !lbAllTimeBtn) return;
++  lbMonthlyBtn?.classList.remove("active");
++  lbAllTimeBtn?.classList.remove("active");
++  if ((time || "").toString().trim().toLowerCase() === "alltime") {
++    lbAllTimeBtn?.classList.add("active");
++  } else {
++    lbMonthlyBtn?.classList.add("active");
++  }
++}
++
++function highlightScopeButton(scope) {
++  viewAllBtn.classList.remove("active");
++  viewStudentsBtn.classList.remove("active");
++  viewTeachersBtn.classList.remove("active");
++
++  if (scope === "all") viewAllBtn.classList.add("active");
++  if (scope === "students") viewStudentsBtn.classList.add("active");
++  if (scope === "teachers") viewTeachersBtn.classList.add("active");
++}
++
++lbMonthlyBtn?.addEventListener("click", () => {
++  currentTime = "monthly";
++  highlightTimeButton(currentTime);
++  backend.loadLeaderboard(currentScope === "all" ? "all" : currentScope, "monthly", true);
++});
++
++lbAllTimeBtn?.addEventListener("click", () => {
++  currentTime = "alltime";
++  highlightTimeButton(currentTime);
++  backend.loadLeaderboard(currentScope === "all" ? "all" : currentScope, "alltime", true);
++});
++
++viewAllBtn?.addEventListener("click", () => {
++  currentScope = "all";
++  highlightScopeButton("all");
++  backend.loadLeaderboard("all", currentTime, false);
++});
++
++viewStudentsBtn?.addEventListener("click", () => {
++  currentScope = "students";
++  highlightScopeButton("students");
++  backend.loadLeaderboard("students", currentTime, false);
++});
++
++viewTeachersBtn?.addEventListener("click", () => {
++  currentScope = "teachers";
++  highlightScopeButton("teachers");
++  backend.loadLeaderboard("teachers", currentTime, false);
++});
++
++highlightScopeButton(currentScope);
++
++if (backend && typeof backend.loadLeaderboard === "function") {
++  const _origLoad = backend.loadLeaderboard.bind(backend);
++  backend.loadLeaderboard = async function (scopeFilter = "all", timeFilter = "monthly", forceRefresh = false) {
++    let normalized = timeFilter;
++    if (typeof normalized === "boolean") {
++      forceRefresh = normalized;
++      normalized = "monthly";
++    }
++    if (typeof normalized === "string") {
++      normalized = normalized.trim().toLowerCase();
++      if (normalized === "all" || normalized === "alltime" || normalized === "all-time") normalized = "alltime";
++      else normalized = "monthly";
++    } else normalized = "monthly";
++
++    highlightTimeButton(normalized);
++    return await _origLoad(scopeFilter, timeFilter, forceRefresh);
++  };
++}
++
++highlightTimeButton(currentTime);
+diff --git a/sql/isolatingvariables_tables.sql b/sql/isolatingvariables_tables.sql
+new file mode 100644
+index 0000000000000000000000000000000000000000..850009251a71349ac1f817d6437ca2aff851ca07
+--- /dev/null
++++ b/sql/isolatingvariables_tables.sql
+@@ -0,0 +1,49 @@
++-- Schema for Variable Isolator game
++
++-- Leaderboard table
++create table if not exists isolating_variables_leaderboard (
++  leaderboard_id bigint generated always as identity primary key,
++  user_id bigint references users(user_id) on delete set null,
++  player_name text not null,
++  questions_answered integer not null default 0,
++  total_time_seconds numeric,
++  penalty_time_seconds numeric,
++  date_added timestamptz default now(),
++  is_teacher boolean default false,
++  is_student boolean default false,
++  version_number text
++);
++
++-- Sessions table
++create table if not exists isolating_variables_sessions (
++  session_id bigint generated always as identity primary key,
++  user_id bigint references users(user_id) on delete set null,
++  player_name text not null,
++  questions_answered integer not null default 0,
++  total_time_seconds numeric,
++  penalty_time_seconds numeric,
++  created_at timestamptz default now(),
++  version_number text
++);
++
++-- Questions table
++create table if not exists isolating_variables_questions (
++  question_id bigint generated always as identity primary key,
++  session_id bigint references isolating_variables_sessions(session_id) on delete cascade,
++  question_number integer,
++  equation text,
++  step_count integer,
++  steps_taken text,
++  correct_steps text,
++  solution numeric,
++  time_taken numeric,
++  mistakes integer,
++  success boolean,
++  date_added timestamptz default now(),
++  player_name text,
++  version_number text
++);
++
++create index if not exists isolating_variables_leaderboard_date_idx on isolating_variables_leaderboard(date_added desc);
++create index if not exists isolating_variables_sessions_user_idx on isolating_variables_sessions(user_id);
++create index if not exists isolating_variables_questions_session_idx on isolating_variables_questions(session_id);
+diff --git a/styles.css b/styles.css
+index 4cdd95e645663ae6a74982ef5f821d242212ba14..2866b42a123cdc69662699ee5a6f28d8ef12f48d 100644
+--- a/styles.css
++++ b/styles.css
+@@ -835,36 +835,125 @@ h1{margin:18px 0 6px;color:var(--accent)}
+   font-weight:700;
+   cursor:pointer;
+   transition:all 0.15s ease;
+ }
+ .factor-btn:hover{border-color:var(--accent2);}
+ .factor-btn.selected{
+   background:var(--accent);
+   border-color:var(--accent2);
+   color:#0b1020;
+   box-shadow:0 0 16px rgba(30,144,255,0.35);
+ }
+ .factor-actions{
+   display:flex;
+   flex-direction:column;
+   align-items:center;
+   gap:8px;
+   justify-content:center;
+ }
+ .factor-actions #factorStatus{
+   min-height:18px;
+   margin:0;
+   text-align:center;
+   width:100%;
+ }
+ 
++/* Variable Isolator */
++.equation-game{
++  max-width:700px;
++  margin:0 auto;
++  padding:16px;
++  display:flex;
++  flex-direction:column;
++  gap:12px;
++}
++.equation-header{
++  display:flex;
++  justify-content:space-between;
++  align-items:center;
++  gap:12px;
++  flex-wrap:wrap;
++}
++.equation-display{
++  font-size:42px;
++  font-weight:800;
++  text-align:center;
++  letter-spacing:1px;
++}
++.operation-list{
++  display:grid;
++  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
++  gap:12px;
++}
++.operation-card{
++  padding:12px 10px;
++  border-radius:12px;
++  border:1px solid #2a2f37;
++  background:linear-gradient(180deg,#1f2530,#151a24);
++  color:#e3e7ef;
++  font-weight:700;
++  cursor:grab;
++  transition:transform 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
++}
++.operation-card:hover{
++  border-color:var(--accent2);
++  transform:translateY(-2px);
++}
++.step-dropzone{
++  border:2px dashed #2a2f37;
++  border-radius:14px;
++  padding:16px;
++  text-align:center;
++  color:#cbd3e3;
++  transition:border-color 0.15s ease, background 0.15s ease;
++}
++.step-dropzone.drag-over{
++  border-color:var(--accent2);
++  background:#1e90ff12;
++}
++.final-answer{
++  display:flex;
++  align-items:center;
++  justify-content:center;
++  gap:10px;
++}
++.final-answer input{
++  width:120px;
++  padding:10px;
++  border-radius:10px;
++  border:1px solid #2a2f37;
++  background:#111620;
++  color:#e6e9ee;
++  font-weight:700;
++  text-align:center;
++}
++.status-good{
++  color:#7fdca2;
++}
++.status-bad{
++  color:#ffb3b3;
++}
++.hidden{
++  display:none;
++}
++.shake{
++  animation:shake 0.3s linear;
++}
++@keyframes shake{
++  0%{transform:translateX(0);}
++  25%{transform:translateX(-6px);}
++  50%{transform:translateX(6px);}
++  75%{transform:translateX(-4px);}
++  100%{transform:translateX(0);}
++}
++
+ /* Classwork status line */
+ .classwork-status{
+   margin:6px 0 4px;
+   font-weight:700;
+ }
+ .classwork-pass{
+   color:#7fdca2;
+ }
+ .classwork-neutral{
+   color:#e3e7ef;
+ }

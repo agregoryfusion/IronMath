@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Whats Better?</title>
+
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="game-topbar">
+    <a class="back-link" href="index.html">← Apps</a>
+    <span class="pill pill-ghost" id="version"></span>
+  </div>
+
+  <h1>Whats Better?</h1>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="game">Game</button>
+    <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
+  </div>
+
+  <div id="loading-screen">
+    <div class="loader"></div>
+    <p class="muted">Loading matchups…</p>
+  </div>
+
+  <section id="comparison-screen" class="panel">
+    <div class="comparison-grid">
+      <div class="choice-card" id="leftCard">
+        <h2 id="leftName">Item A</h2>
+        <button id="leftVoteBtn" class="primary-btn full-btn">Left is better</button>
+      </div>
+
+      <div class="choice-card" id="rightCard">
+        <h2 id="rightName">Item B</h2>
+        <button id="rightVoteBtn" class="primary-btn full-btn">Right is better</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="leaderboard-section" class="panel" style="display:none">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Live ladder</p>
+        <h3>Top ranked items</h3>
+      </div>
+      <button id="reloadLeaderboardBtn" class="ghost-btn small">Reload</button>
+    </div>
+    <p class="muted small">Shown by current rating. A gentle decay kicks in after 14 idle days.</p>
+    <div class="leaderboard-table-wrap">
+      <table id="leaderboardTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Rating</th>
+            <th>W</th>
+            <th>L</th>
+            <th>Matches</th>
+            <th>Last Played</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="muted small" id="leaderboardStatus"></p>
+  </section>
+
+  <div id="unauthorized-screen" class="panel" style="display:none"></div>
+
+  <script type="module" src="js/auth_Comparisoning.js"></script>
+</body>
+</html>

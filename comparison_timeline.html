@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>History Timeline Duel</title>
+
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="game-topbar">
+    <a class="back-link" href="index.html">← Apps</a>
+    <span class="pill pill-ghost" id="version"></span>
+  </div>
+
+  <h1>What Happened First?</h1>
+
+  <div id="loading-screen">
+    <div class="loader"></div>
+    <p class="muted">Loading events…</p>
+  </div>
+
+  <section id="comparison-screen" class="panel">
+    <div class="comparison-grid">
+      <div class="choice-card" id="leftCard">
+        <h2 id="leftName">Event A</h2>
+        <button id="leftVoteBtn" class="primary-btn full-btn">Event A was earlier</button>
+      </div>
+
+      <div class="choice-card" id="rightCard">
+        <h2 id="rightName">Event B</h2>
+        <button id="rightVoteBtn" class="primary-btn full-btn">Event B was earlier</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="timeline-section" class="panel">
+    <div class="timeline-wrap">
+      <div id="timelineTrack" class="timeline-track"></div>
+      <div id="timelineMarkers" class="timeline-markers"></div>
+    </div>
+    <p class="muted small" id="timelineStatus"></p>
+  </section>
+
+  <div id="unauthorized-screen" class="panel" style="display:none"></div>
+
+  <script type="module" src="js/auth_HistoryComparison.js"></script>
+</body>
+</html>
