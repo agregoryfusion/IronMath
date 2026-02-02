@@ -6,6 +6,7 @@ const FM = (window.FastMath = window.FastMath || {});
 const backend = FM.backendComparisoning || {};
 
 const GAME_ID = 2;
+const DEBUG_CAPS_FEATURE = true; // dev-only extras (show active pair + predictions)
 
 const loadingScreen = document.getElementById("loading-screen");
 const comparisonScreen = document.getElementById("comparison-screen");
@@ -27,10 +28,10 @@ const state = {
   lastPairIds: [],
   markerEls: [],
   activeIdx: -1,
-  user: {
-    userId: null,
-    playerName: "Player"
-  }
+  timelineRows: [],
+  isCaps: false,
+  predictionEl: null,
+  user: { userId: null, playerName: "Player" }
 };
 
 if (comparisonScreen) comparisonScreen.style.display = "none";
@@ -55,9 +56,7 @@ function showGame() {
 }
 
 function setVersionBadge() {
-  if (versionBadge && FM.GAME_VERSION) {
-    versionBadge.textContent = "v" + FM.GAME_VERSION;
-  }
+  if (versionBadge && FM.GAME_VERSION) versionBadge.textContent = "v" + FM.GAME_VERSION;
 }
 
 function renderPair(pair) {
@@ -74,16 +73,12 @@ function renderPair(pair) {
 }
 
 function disableVoteButtons(disabled) {
-  [leftVoteBtn, rightVoteBtn].forEach((btn) => {
-    if (btn) btn.disabled = disabled;
-  });
+  [leftVoteBtn, rightVoteBtn].forEach((btn) => { if (btn) btn.disabled = disabled; });
 }
 
 function applyRatingUpdate(itemId, newRating) {
   const target = state.items.find((i) => i.id === itemId);
-  if (target && Number.isFinite(newRating)) {
-    target.rating = Number(newRating);
-  }
+  if (target && Number.isFinite(newRating)) target.rating = Number(newRating);
 }
 
 function choosePair() {
@@ -143,13 +138,14 @@ async function renderTimeline() {
   timelineMarkers.innerHTML = "";
   state.markerEls = [];
   state.activeIdx = -1;
+  state.timelineRows = [];
   if (timelineStatus) timelineStatus.textContent = "Building timeline…";
   try {
     const rowsDesc = await backend.fetchLeaderboard(GAME_ID, 300);
-    // Earlier events accumulate higher Elo (chosen as "happened first"). Put highest rating on the left.
     let rows = (rowsDesc || []).slice();
     const activeIds = Array.isArray(state.currentPair) ? state.currentPair.map(p => p?.id).filter(Boolean) : [];
-    if (activeIds.length) {
+    const includeActive = DEBUG_CAPS_FEATURE && state.isCaps;
+    if (activeIds.length && !includeActive) {
       rows = rows.filter(r => !activeIds.includes(r.id));
     }
     rows = rows.sort((a,b)=>b.rating - a.rating);
@@ -157,16 +153,19 @@ async function renderTimeline() {
       if (timelineStatus) timelineStatus.textContent = "No votes yet.";
       return;
     }
+    state.timelineRows = rows;
 
-    const minR = Math.min(...rows.map(r=>r.rating ?? 0));
-    const maxR = Math.max(...rows.map(r=>r.rating ?? 0));
+    const ratingVals = rows.map(r => Number(r.rating ?? 0));
+    const minR = Math.min(...ratingVals);
+    const maxR = Math.max(...ratingVals);
     const span = Math.max(1, maxR - minR);
 
     rows.forEach((row, idx) => {
-      // Highest rating -> far left (older); lowest -> far right (newer)
-      const pct = ((maxR - row.rating) / span) * 92 + 4; // keep inside 4%-96% padding
+      // Map linearly: min rating at far left, max rating at far right
+      const pct = ((maxR - row.rating) / span) * 92 + 4;
       const marker = document.createElement("div");
-      marker.className = "timeline-marker " + (idx % 2 === 0 ? "above" : "below");
+      const pairClass = includeActive && activeIds.includes(row.id) ? " pair-marker" : "";
+      marker.className = "timeline-marker " + (idx % 2 === 0 ? "above" : "below") + pairClass;
       marker.style.left = `${pct}%`;
       marker.setAttribute("tabindex", "0");
       marker.dataset.idx = String(idx);
@@ -197,7 +196,6 @@ async function renderTimeline() {
 function setActiveMarker(idx) {
   if (!state.markerEls.length) return;
   state.markerEls.forEach(el => el.classList.remove("active-marker"));
-  // also drop any current :hover highlight by blurring
   state.markerEls.forEach(el => el.blur && el.blur());
   if (idx < 0 || idx >= state.markerEls.length) {
     state.activeIdx = -1;
@@ -216,15 +214,104 @@ function cycleActiveMarker(delta) {
   setActiveMarker(next);
 }
 
+function clearPrediction() {
+  if (state.predictionEl && state.predictionEl.remove) state.predictionEl.remove();
+  state.predictionEl = null;
+}
+
+function simulateWin(winner, loser) {
+  if (!winner || !loser) return { winnerRating: winner?.rating, loserRating: loser?.rating };
+  const v_k_base = 24;
+  const v_max_gap = 400;
+  const v_max_delta = 25;
+
+  let wRating = winner.rating ?? 1000;
+  let lRating = loser.rating ?? 1000;
+  const wMatches = winner.matches ?? 0;
+  const lMatches = loser.matches ?? 0;
+
+  const w_expected = 1 / (1 + Math.pow(10, (lRating - wRating) / 400));
+  const rating_gap = Math.abs(wRating - lRating);
+  let kBase = v_k_base;
+  if (rating_gap > v_max_gap) kBase = kBase * (v_max_gap / rating_gap);
+
+  let k_match_factor = 1 / (1 + ((wMatches + lMatches) / 2) / 20);
+  let k_year_factor = 1;
+  if (winner.event_year != null && loser.event_year != null) {
+    k_year_factor = 1 / (1 + (Math.abs(winner.event_year - loser.event_year) / 50));
+  }
+
+  let w_delta = kBase * k_match_factor * k_year_factor * (1 - w_expected);
+  w_delta = Math.max(-v_max_delta, Math.min(v_max_delta, w_delta));
+
+  const w_new = wRating + w_delta;
+  return { winnerRating: w_new };
+}
+
+function showPrediction(winnerId, loserId) {
+  clearPrediction();
+  if (!DEBUG_CAPS_FEATURE || !state.isCaps) return;
+  const rows = state.timelineRows;
+  if (!rows || !rows.length) return;
+  const winner = state.items.find(i => i.id === winnerId);
+  const loser = state.items.find(i => i.id === loserId);
+  if (!winner || !loser) return;
+  const { winnerRating } = simulateWin(winner, loser);
+  if (!Number.isFinite(winnerRating)) return;
+
+  const ratings = rows.map(r => Number(r.id === winnerId ? winnerRating : r.rating ?? 1000));
+  const minR = Math.min(...ratings);
+  const maxR = Math.max(...ratings);
+  const span = Math.max(1, maxR - minR);
+  const pct = ((maxR - winnerRating) / span) * 92 + 4;
+
+  const marker = document.createElement("div");
+  marker.className = "timeline-marker prediction above";
+  marker.style.left = `${pct}%`;
+  marker.setAttribute("tabindex", "-1");
+
+  const stem = document.createElement("div");
+  stem.className = "stem";
+  const dot = document.createElement("div");
+  dot.className = "dot";
+  const label = document.createElement("div");
+  label.className = "label";
+  label.textContent = `${winner.name} (after vote)`;
+
+  marker.appendChild(stem);
+  marker.appendChild(dot);
+  marker.appendChild(label);
+  timelineMarkers.appendChild(marker);
+  state.predictionEl = marker;
+}
+
 function wireEvents() {
   if (leftVoteBtn) leftVoteBtn.addEventListener("click", () => handleVote("left"));
   if (rightVoteBtn) rightVoteBtn.addEventListener("click", () => handleVote("right"));
+
+  if (leftVoteBtn) {
+    leftVoteBtn.addEventListener("mouseenter", () => {
+      if (DEBUG_CAPS_FEATURE && state.isCaps && state.currentPair) {
+        showPrediction(state.currentPair[0]?.id, state.currentPair[1]?.id);
+      }
+    });
+    leftVoteBtn.addEventListener("mouseleave", clearPrediction);
+  }
+  if (rightVoteBtn) {
+    rightVoteBtn.addEventListener("mouseenter", () => {
+      if (DEBUG_CAPS_FEATURE && state.isCaps && state.currentPair) {
+        showPrediction(state.currentPair[1]?.id, state.currentPair[0]?.id);
+      }
+    });
+    rightVoteBtn.addEventListener("mouseleave", clearPrediction);
+  }
+
   if (timelineMarkers) {
     timelineMarkers.addEventListener("mouseleave", () => setActiveMarker(-1));
     timelineMarkers.addEventListener("wheel", (e) => {
       e.preventDefault();
       const delta = e.deltaY < 0 ? 1 : -1; // scroll up moves right (forward)
-      setActiveMarker(state.activeIdx); // clear hover highlights
+      setActiveMarker(state.activeIdx);
       cycleActiveMarker(delta);
     }, { passive: false });
   }
@@ -232,9 +319,23 @@ function wireEvents() {
     timelineTrack.addEventListener("wheel", (e) => {
       e.preventDefault();
       const delta = e.deltaY < 0 ? 1 : -1; // scroll up moves right (forward)
-      setActiveMarker(state.activeIdx); // clear hover highlights
+      setActiveMarker(state.activeIdx);
       cycleActiveMarker(delta);
     }, { passive: false });
+  }
+
+  if (DEBUG_CAPS_FEATURE) {
+    const capsHandler = (e) => {
+      const caps = e.getModifierState && e.getModifierState("CapsLock");
+      if (caps !== state.isCaps) {
+        state.isCaps = caps;
+        clearPrediction();
+        renderTimeline();
+      }
+    };
+    window.addEventListener("keydown", capsHandler);
+    window.addEventListener("keyup", capsHandler);
+    window.addEventListener("blur", () => { state.isCaps = false; clearPrediction(); renderTimeline(); });
   }
 }
 

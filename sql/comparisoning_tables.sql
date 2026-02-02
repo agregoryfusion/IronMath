@@ -6,6 +6,7 @@ create table if not exists comparison_items (
   item_id bigint generated always as identity primary key,
   name text not null unique,
   category text default 'General',
+  event_year integer, -- optional: for timeline weighting
   rating numeric not null default 1000,          -- Elo-style rating
   rating_deviation numeric not null default 350, -- reserved for possible TrueSkill-style math
   wins integer not null default 0,
@@ -51,6 +52,7 @@ declare
   v_k_base numeric := 24;         -- base K factor
   v_max_gap numeric := 400;       -- if ratings far apart, dampen K
   v_decay_per_day numeric := 2;   -- gentle decay after 14 idle days
+  v_max_delta numeric := 25;      -- cap any single-rating move
   w record;
   l record;
   w_expected numeric;
@@ -64,6 +66,8 @@ declare
   l_before numeric;
   idle_days_w numeric;
   idle_days_l numeric;
+  k_match_factor numeric := 1;    -- shrink K as items accumulate votes
+  k_year_factor numeric := 1;     -- shrink K when events far apart in time
 begin
   if p_winner_id is null or p_loser_id is null or p_winner_id = p_loser_id then
     raise exception 'Winner and loser must be different item ids';
@@ -97,8 +101,20 @@ begin
     v_k_base := v_k_base * (v_max_gap / rating_gap);
   end if;
 
-  w_delta := v_k_base * (1 - w_expected);
-  l_delta := v_k_base * (0 - l_expected);
+  -- More matches -> smaller moves (anchor ~20 votes)
+  k_match_factor := 1 / (1 + ((coalesce(w.matches,0) + coalesce(l.matches,0))::numeric / 2) / 20);
+
+  -- If we know event years, big temporal gaps should move ratings less
+  if w.event_year is not null and l.event_year is not null then
+    k_year_factor := 1 / (1 + (abs(w.event_year - l.event_year)::numeric / 50));
+  end if;
+
+  w_delta := v_k_base * k_match_factor * k_year_factor * (1 - w_expected);
+  l_delta := v_k_base * k_match_factor * k_year_factor * (0 - l_expected);
+
+  -- Cap per-vote movement
+  w_delta := greatest(-v_max_delta, least(v_max_delta, w_delta));
+  l_delta := greatest(-v_max_delta, least(v_max_delta, l_delta));
 
   w_new := w.rating + w_delta;
   l_new := l.rating + l_delta;
@@ -144,43 +160,73 @@ end;
 $$;
 
 -- Seed data: 16 desserts (Game 1). Safe to re-run.
-insert into comparison_items (game_id, name, category)
+insert into comparison_items (game_id, name, category, event_year)
 values
-(1, 'Chocolate Cake', 'Dessert'),
-(1, 'Cheesecake', 'Dessert'),
-(1, 'Apple Pie', 'Dessert'),
-(1, 'Brownies', 'Dessert'),
-(1, 'Ice Cream', 'Dessert'),
-(1, 'Tiramisu', 'Dessert'),
-(1, 'Creme Brulee', 'Dessert'),
-(1, 'Donuts', 'Dessert'),
-(1, 'Cupcakes', 'Dessert'),
-(1, 'Gelato', 'Dessert'),
-(1, 'Macarons', 'Dessert'),
-(1, 'Pecan Pie', 'Dessert'),
-(1, 'Key Lime Pie', 'Dessert'),
-(1, 'Banana Split', 'Dessert'),
-(1, 'Cinnamon Roll', 'Dessert'),
-(1, 'Bread Pudding', 'Dessert')
+(1, 'Chocolate Cake', 'Dessert', null),
+(1, 'Cheesecake', 'Dessert', null),
+(1, 'Apple Pie', 'Dessert', null),
+(1, 'Brownies', 'Dessert', null),
+(1, 'Ice Cream', 'Dessert', null),
+(1, 'Tiramisu', 'Dessert', null),
+(1, 'Creme Brulee', 'Dessert', null),
+(1, 'Donuts', 'Dessert', null),
+(1, 'Cupcakes', 'Dessert', null),
+(1, 'Gelato', 'Dessert', null),
+(1, 'Macarons', 'Dessert', null),
+(1, 'Pecan Pie', 'Dessert', null),
+(1, 'Key Lime Pie', 'Dessert', null),
+(1, 'Banana Split', 'Dessert', null),
+(1, 'Cinnamon Roll', 'Dessert', null),
+(1, 'Bread Pudding', 'Dessert', null)
+on conflict (name) do nothing;
+
+-- Additional desserts for Game 1
+insert into comparison_items (game_id, name, category, event_year)
+values
+(1, 'Ice Cream', 'Dessert', null),
+(1, 'Milkshake', 'Dessert', null),
+(1, 'Chocolate Chip Cookie', 'Dessert', null),
+(1, 'Sugar Cookie', 'Dessert', null),
+(1, 'Oatmeal-Rasin Cookie', 'Dessert', null),
+(1, 'Brownies', 'Dessert', null),
+(1, 'Blondies', 'Dessert', null),
+(1, 'Birthday Cake', 'Dessert', null),
+(1, 'Cupcakes', 'Dessert', null),
+(1, 'Cheesecake', 'Dessert', null),
+(1, 'Apple Pie', 'Dessert', null),
+(1, 'Pumpkin Pie', 'Dessert', null),
+(1, 'Pecan Pie', 'Dessert', null),
+(1, 'Molten Chocolate Lava Cake', 'Dessert', null),
+(1, 'Chocolate Cake', 'Dessert', null),
+(1, 'Fudge', 'Dessert', null),
+(1, 'Yellow Cake', 'Dessert', null),
+(1, 'Donuts', 'Dessert', null),
+(1, 'Cinnamon Rolls', 'Dessert', null),
+(1, 'Fruit Cobbler', 'Dessert', null),
+(1, 'Pudding', 'Dessert', null),
+(1, 'Popsicles', 'Dessert', null),
+(1, 'Ice Cream Sandwiches', 'Dessert', null),
+(1, 'S''mores', 'Dessert', null),
+(1, 'Funnel Cake', 'Dessert', null)
 on conflict (name) do nothing;
 
 -- Seed data: 16 historical events (Game 2)
-insert into comparison_items (game_id, name, category)
+insert into comparison_items (game_id, name, category, event_year)
 values
-(2, 'Fall of Rome (476 CE)', 'History'),
-(2, 'Magna Carta Signed (1215)', 'History'),
-(2, 'Columbus Reaches Americas (1492)', 'History'),
-(2, 'Protestant Reformation Begins (1517)', 'History'),
-(2, 'American Declaration of Independence (1776)', 'History'),
-(2, 'French Revolution Begins (1789)', 'History'),
-(2, 'US Civil War Ends (1865)', 'History'),
-(2, 'Wright Brothers First Flight (1903)', 'History'),
-(2, 'Start of World War I (1914)', 'History'),
-(2, 'Start of World War II (1939)', 'History'),
-(2, 'Moon Landing (1969)', 'History'),
-(2, 'Fall of Berlin Wall (1989)', 'History'),
-(2, 'Internet Becomes Public (1991)', 'History'),
-(2, '9/11 Attacks (2001)', 'History'),
-(2, 'Global Financial Crisis (2008)', 'History'),
-(2, 'James Webb Telescope Launch (2021)', 'History')
+(2, 'Fall of Rome (476 CE)', 'History', 476),
+(2, 'Magna Carta Signed (1215)', 'History', 1215),
+(2, 'Columbus Reaches Americas (1492)', 'History', 1492),
+(2, 'Protestant Reformation Begins (1517)', 'History', 1517),
+(2, 'American Declaration of Independence (1776)', 'History', 1776),
+(2, 'French Revolution Begins (1789)', 'History', 1789),
+(2, 'US Civil War Ends (1865)', 'History', 1865),
+(2, 'Wright Brothers First Flight (1903)', 'History', 1903),
+(2, 'Start of World War I (1914)', 'History', 1914),
+(2, 'Start of World War II (1939)', 'History', 1939),
+(2, 'Moon Landing (1969)', 'History', 1969),
+(2, 'Fall of Berlin Wall (1989)', 'History', 1989),
+(2, 'Internet Becomes Public (1991)', 'History', 1991),
+(2, '9/11 Attacks (2001)', 'History', 2001),
+(2, 'Global Financial Crisis (2008)', 'History', 2008),
+(2, 'James Webb Telescope Launch (2021)', 'History', 2021)
 on conflict (name) do nothing;
