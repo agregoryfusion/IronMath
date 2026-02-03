@@ -161,7 +161,7 @@ async function renderLeaderboard() {
       if (l === 0) return w > 0 ? "∞" : "—";
       return (w / l).toFixed(2);
     };
-    const formatMMR = (r) => (Number.isFinite(r) ? Math.round(r) : "—");
+    const formatMMR = (r) => (Number.isFinite(r) ? Number(r).toFixed(1) : "—");
 
     rows.forEach((row, idx) => {
       const tr = document.createElement("tr");
