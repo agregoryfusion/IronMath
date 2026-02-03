@@ -150,7 +150,7 @@ async function renderLeaderboard() {
   leaderboardBody.innerHTML = "";
   if (leaderboardStatus) leaderboardStatus.textContent = "Loading…";
   try {
-    const rows = await backend.fetchLeaderboard(GAME_ID, 15);
+    const rows = await backend.fetchLeaderboard(GAME_ID);
     if (!rows || rows.length === 0) {
       if (leaderboardStatus) leaderboardStatus.textContent = "No votes yet.";
       return;

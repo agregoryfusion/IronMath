@@ -905,6 +905,42 @@ h1{margin:18px 0 6px;color:var(--accent)}
   overflow-x:auto;
 }
 
+#leaderboard-section{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  max-width:1100px;
+  width:100%;
+  margin:0 auto;
+}
+#leaderboard-section .leaderboard-actions{
+  width:100%;
+  display:flex;
+  justify-content:center;
+}
+#leaderboard-section .leaderboard-table-wrap{
+  width:min(960px,100%);
+}
+#leaderboardTable{
+  width:100%;
+  border-collapse:collapse;
+  margin:0 auto;
+}
+#leaderboardTable th,
+#leaderboardTable td{
+  padding:10px;
+  border-bottom:1px solid #2a2f37;
+  text-align:center;
+}
+#leaderboardTable th{
+  color:var(--accent);
+  font-weight:600;
+  border-bottom:2px solid #1e90ff33;
+}
+#leaderboardTable td{color:#e6e9ee;}
+#leaderboardTable tr:hover td{background:#1e90ff22;}
+
 /* Tabs */
 .tab-bar{
   display:inline-flex;

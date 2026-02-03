@@ -48,13 +48,18 @@ async function loadItems(gameId = 1, limit = 200) {
   return (data || []).map(normalizeItem);
 }
 
-async function fetchLeaderboard(gameId = 1, limit = 25) {
-  const { data, error } = await supabase
+async function fetchLeaderboard(gameId = 1, limit = null) {
+  let query = supabase
     .from(TABLES.items)
     .select("item_id,name,category,rating,wins,losses,matches,last_played")
     .eq("game_id", gameId)
-    .order("rating", { ascending: false })
-    .limit(limit);
+    .order("rating", { ascending: false });
+
+  if (Number.isFinite(limit) && limit > 0) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("fetchLeaderboard error", error);
