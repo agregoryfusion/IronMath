@@ -73,6 +73,48 @@ async function fetchLeaderboard(gameId = 1, limit = null) {
   return (data || []).map(normalizeItem);
 }
 
+async function fetchWeeklyVoteCount({ userId = null, playerName = null, gameId = 1, startIso = null, endIso = null }) {
+  let query = supabase
+    .from(TABLES.votes)
+    .select("vote_id", { count: "exact", head: true })
+    .eq("game_id", gameId);
+
+  if (startIso) query = query.gte("created_at", startIso);
+  if (endIso) query = query.lte("created_at", endIso);
+
+  if (userId) {
+    query = query.eq("user_id", userId);
+  } else if (playerName) {
+    query = query.eq("voter_name", playerName);
+  }
+
+  const { count, error } = await query;
+  if (error) {
+    console.error("fetchWeeklyVoteCount error", error);
+    throw error;
+  }
+  return Number(count || 0);
+}
+
+async function fetchWeeklySubmissionCount({ playerName = null, gameId = 1, startIso = null, endIso = null }) {
+  if (!playerName) return 0;
+  let query = supabase
+    .from(TABLES.items)
+    .select("item_id", { count: "exact", head: true })
+    .eq("game_id", gameId)
+    .eq("submitted_by", playerName);
+
+  if (startIso) query = query.gte("created_at", startIso);
+  if (endIso) query = query.lte("created_at", endIso);
+
+  const { count, error } = await query;
+  if (error) {
+    console.error("fetchWeeklySubmissionCount error", error);
+    throw error;
+  }
+  return Number(count || 0);
+}
+
 async function fetchSubmissionItems(gameId = 1, limit = 2000) {
   const { data, error } = await supabase
     .from(TABLES.items)
@@ -108,25 +150,19 @@ async function fetchUserSubmissionsInRange({ playerName, gameId = 1, startIso = 
 }
 
 async function submitComparisonItem({ name, category = null, submittedBy = null, gameId = 1 }) {
-  const payload = {
-    game_id: gameId,
-    name,
-    submitted_by: submittedBy,
-    approved: false
-  };
-  if (category) payload.category = category;
-
-  const { data, error } = await supabase
-    .from(TABLES.items)
-    .insert(payload)
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("comparison_submit_item", {
+    p_name: name,
+    p_category: category,
+    p_submitted_by: submittedBy,
+    p_game_id: gameId
+  });
 
   if (error) {
     console.error("submitComparisonItem error", error);
     throw error;
   }
-  return normalizeItem(data);
+  const row = Array.isArray(data) ? data[0] : data;
+  return normalizeItem(row);
 }
 
 async function fetchVoterCounts(gameId = 1) {
@@ -201,6 +237,8 @@ async function submitVote({ winnerId, loserId, userId = null, playerName = null,
 FM.backendComparisoning = {
   loadItems,
   fetchLeaderboard,
+  fetchWeeklyVoteCount,
+  fetchWeeklySubmissionCount,
   fetchSubmissionItems,
   fetchUserSubmissionsInRange,
   submitComparisonItem,

@@ -35,6 +35,7 @@ const submissionConfirmBtn = document.getElementById("submissionConfirmBtn");
 
 const SIMILARITY_THRESHOLD = 0.25;
 const MAX_SUBMISSION_LENGTH = 60;
+const VOTE_COOLDOWN_MS = 2000;
 
 const state = {
   items: [],
@@ -54,10 +55,15 @@ const state = {
     hasChecked: false,
     weekStart: null,
     weekEnd: null,
+    voteCount: 0,
+    submissionCount: 0,
+    maxAllowed: 1,
+    votesToNext: 0,
     items: [],
     isOpen: false
   }
 };
+let lastVoteAt = 0;
 
 if (comparisonScreen) comparisonScreen.style.display = "none";
 showLoading();
@@ -214,6 +220,18 @@ function prepareSubmissionItems(rows = []) {
   }));
 }
 
+function recomputeSubmissionAllowance() {
+  const voteCount = Number(state.submission.voteCount || 0);
+  const submissionCount = Number(state.submission.submissionCount || 0);
+  const maxAllowed = Math.floor(voteCount / 100) + 1;
+  state.submission.maxAllowed = maxAllowed;
+  state.submission.canSubmit = submissionCount < maxAllowed;
+  state.submission.votesToNext = Math.max(0, maxAllowed * 100 - voteCount);
+  if (submitItemBtn) {
+    submitItemBtn.style.display = state.submission.canSubmit ? "inline-flex" : "none";
+  }
+}
+
 async function ensureSubmissionItemsLoaded() {
   if (state.submission.items && state.submission.items.length) return;
   if (!backend.fetchSubmissionItems) return;
@@ -221,38 +239,50 @@ async function ensureSubmissionItemsLoaded() {
   state.submission.items = prepareSubmissionItems(rows || []);
 }
 
-function getExtraSubmissionVotesRemaining() {
-  return null;
-}
-
 function updateSubmissionLockout() {
   if (!submitLockoutMsg) return;
-  const remaining = getExtraSubmissionVotesRemaining();
-  if (!state.submission.canSubmit && Number.isFinite(remaining)) {
-    const needed = Math.max(0, Math.ceil(remaining));
+  if (state.submission.canSubmit) {
+    submitLockoutMsg.textContent = "";
+    submitLockoutMsg.style.display = "none";
+    return;
+  }
+  const remaining = state.submission.votesToNext;
+  if (Number.isFinite(remaining) && remaining > 0) {
+    const needed = Math.max(1, Math.ceil(remaining));
     submitLockoutMsg.textContent = `You can earn another submission by voting ${needed} more times.`;
     submitLockoutMsg.style.display = "block";
     return;
   }
-  submitLockoutMsg.textContent = "";
-  submitLockoutMsg.style.display = "none";
+  submitLockoutMsg.textContent = "You can earn another submission by voting more.";
+  submitLockoutMsg.style.display = "block";
 }
 
 async function refreshSubmissionEligibility() {
-  if (!submitItemBtn || !backend.fetchUserSubmissionsInRange) return;
+  if (!submitItemBtn || !backend.fetchWeeklyVoteCount || !backend.fetchWeeklySubmissionCount) return;
   const { start, end } = getWeekBounds();
   state.submission.weekStart = start;
   state.submission.weekEnd = end;
   try {
-    const rows = await backend.fetchUserSubmissionsInRange({
-      playerName: state.user.playerName,
-      gameId: GAME_ID,
-      startIso: start.toISOString(),
-      endIso: end.toISOString()
-    });
-    const hasSubmitted = Array.isArray(rows) && rows.length > 0;
-    state.submission.canSubmit = !hasSubmitted;
-    submitItemBtn.style.display = state.submission.canSubmit ? "inline-flex" : "none";
+    const startIso = start.toISOString();
+    const endIso = end.toISOString();
+    const [voteCount, submissionCount] = await Promise.all([
+      backend.fetchWeeklyVoteCount({
+        playerName: state.user.playerName,
+        gameId: GAME_ID,
+        startIso,
+        endIso
+      }),
+      backend.fetchWeeklySubmissionCount({
+        playerName: state.user.playerName,
+        gameId: GAME_ID,
+        startIso,
+        endIso
+      })
+    ]);
+
+    state.submission.voteCount = voteCount || 0;
+    state.submission.submissionCount = submissionCount || 0;
+    recomputeSubmissionAllowance();
   } catch (err) {
     console.error(err);
     submitItemBtn.style.display = "none";
@@ -367,21 +397,32 @@ async function handleSubmissionConfirm() {
     });
 
     setSubmissionSuccess("Submitted! Your item will appear once approved.");
-    state.submission.canSubmit = false;
-    if (submitItemBtn) submitItemBtn.style.display = "none";
+    state.submission.submissionCount = (state.submission.submissionCount || 0) + 1;
+    recomputeSubmissionAllowance();
     updateSubmissionLockout();
 
     setTimeout(() => toggleSubmissionOverlay(false), 900);
   } catch (err) {
     console.error(err);
     const isDuplicate = err && err.code === "23505";
-    setSubmissionError(isDuplicate ? "That item already exists." : "Could not submit item. Please try again.");
+    const isLimit = err && String(err.message || "").toLowerCase().includes("submission limit");
+    if (isLimit) {
+      setSubmissionError("You have no submissions left this week. Vote more to earn another submission.");
+    } else {
+      setSubmissionError(isDuplicate ? "That item already exists." : "Could not submit item. Please try again.");
+    }
   } finally {
     setSubmissionControlsDisabled(false);
   }
 }
 
 async function handleVote(side = "left") {
+  const now = Date.now();
+  if (now - lastVoteAt < VOTE_COOLDOWN_MS) {
+    setStatus("Slow down and atleast read each option", true);
+    return;
+  }
+  lastVoteAt = now;
   const pair = state.currentPair;
   if (!pair || pair.length < 2) return;
   const winner = side === "left" ? pair[0] : pair[1];
@@ -402,6 +443,9 @@ async function handleVote(side = "left") {
     applyRatingUpdate(loser.id, res.loserRating);
     const delta = Math.abs(Math.round((res.winnerRating ?? winnerBefore) - winnerBefore));
     setStatus(`${winner.name} inched ahead by ${delta} pts`);
+    state.submission.voteCount = Number(state.submission.voteCount || 0) + 1;
+    recomputeSubmissionAllowance();
+    updateSubmissionLockout();
     choosePair();
   } catch (err) {
     console.error(err);

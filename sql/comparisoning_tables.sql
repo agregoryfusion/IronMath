@@ -49,6 +49,9 @@ create index if not exists comparison_items_rating_idx on comparison_items(ratin
 create index if not exists comparison_items_game_idx on comparison_items(game_id, rating desc);
 create index if not exists comparison_votes_game_idx on comparison_votes(game_id, created_at desc);
 create index if not exists comparison_items_approved_idx on comparison_items(game_id, approved, rating desc);
+create index if not exists comparison_votes_user_week_idx on comparison_votes(game_id, user_id, created_at desc);
+create index if not exists comparison_votes_voter_week_idx on comparison_votes(game_id, voter_name, created_at desc);
+create index if not exists comparison_items_submitter_week_idx on comparison_items(game_id, submitted_by, created_at desc);
 
 -- Atomic rating update for a single vote. Returns the new ratings for both items.
 create or replace function comparison_submit_vote(
@@ -174,6 +177,59 @@ begin
   );
 
   return query select w_new, l_new;
+end;
+$$;
+
+-- Controlled insert for student submissions (enforces weekly limits based on votes).
+create or replace function comparison_submit_item(
+  p_name text,
+  p_category text default null,
+  p_submitted_by text,
+  p_game_id integer default 1
+) returns setof comparison_items language plpgsql as $$
+declare
+  v_now timestamptz := now();
+  v_week_start timestamptz;
+  v_week_end timestamptz;
+  v_vote_count bigint;
+  v_submission_count bigint;
+  v_allowed int;
+begin
+  if p_name is null or length(trim(p_name)) = 0 then
+    raise exception 'Item name is required';
+  end if;
+  if p_submitted_by is null or length(trim(p_submitted_by)) = 0 then
+    raise exception 'Submitted by is required';
+  end if;
+
+  -- Week starts on Sunday 00:00 (server time). Shift by 1 day so date_trunc('week') aligns with Sunday.
+  v_week_start := date_trunc('week', v_now + interval '1 day') - interval '1 day';
+  v_week_end := v_week_start + interval '7 days';
+
+  select count(*) into v_vote_count
+    from comparison_votes
+    where game_id = p_game_id
+      and created_at >= v_week_start
+      and created_at < v_week_end
+      and lower(coalesce(voter_name,'')) = lower(p_submitted_by);
+
+  select count(*) into v_submission_count
+    from comparison_items
+    where game_id = p_game_id
+      and created_at >= v_week_start
+      and created_at < v_week_end
+      and lower(coalesce(submitted_by,'')) = lower(p_submitted_by);
+
+  v_allowed := floor(v_vote_count / 100.0)::int + 1;
+
+  if v_submission_count >= v_allowed then
+    raise exception 'Submission limit reached for this week';
+  end if;
+
+  return query
+    insert into comparison_items (game_id, name, category, submitted_by, approved)
+    values (p_game_id, p_name, coalesce(p_category, 'General'), p_submitted_by, false)
+    returning *;
 end;
 $$;
 

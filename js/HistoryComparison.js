@@ -7,6 +7,7 @@ const backend = FM.backendComparisoning || {};
 
 const GAME_ID = 2;
 const DEBUG_CAPS_FEATURE = true; // dev-only extras (show active pair + predictions)
+const VOTE_COOLDOWN_MS = 2000;
 
 const loadingScreen = document.getElementById("loading-screen");
 const comparisonScreen = document.getElementById("comparison-screen");
@@ -33,6 +34,7 @@ const state = {
   predictionEl: null,
   user: { userId: null, playerName: "Player" }
 };
+let lastVoteAt = 0;
 
 if (comparisonScreen) comparisonScreen.style.display = "none";
 showLoading();
@@ -112,6 +114,12 @@ async function refreshItemsAndPair() {
 }
 
 async function handleVote(side = "left") {
+  const now = Date.now();
+  if (now - lastVoteAt < VOTE_COOLDOWN_MS) {
+    setStatus("Slow down and atleast read each option", true);
+    return;
+  }
+  lastVoteAt = now;
   const pair = state.currentPair;
   if (!pair || pair.length < 2) return;
   const winner = side === "left" ? pair[0] : pair[1];
