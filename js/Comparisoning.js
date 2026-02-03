@@ -14,6 +14,9 @@ const statusText = document.getElementById("statusText");
 const reloadLeaderboardBtn = document.getElementById("reloadLeaderboardBtn");
 const leaderboardBody = document.querySelector("#leaderboardTable tbody");
 const leaderboardStatus = document.getElementById("leaderboardStatus");
+const votersSection = document.getElementById("voters-section");
+const votersBody = document.querySelector("#votersTable tbody");
+const votersStatus = document.getElementById("votersStatus");
 const tabButtons = Array.from(document.querySelectorAll(".tab-btn"));
 const GAME_ID = 1;
 
@@ -27,6 +30,7 @@ const state = {
   currentPair: null,
   lastPairIds: [],
   hasLoadedLeaderboard: false,
+  hasLoadedVoters: false,
   activeTab: "game",
   user: {
     userId: null,
@@ -49,18 +53,28 @@ function showLoading() {
   if (loadingScreen) loadingScreen.style.display = "flex";
   if (comparisonScreen) comparisonScreen.style.display = "none";
   if (leaderboardSection) leaderboardSection.style.display = "none";
+  if (votersSection) votersSection.style.display = "none";
 }
 
 function showGame() {
   if (loadingScreen) loadingScreen.style.display = "none";
   if (comparisonScreen) comparisonScreen.style.display = "block";
   if (leaderboardSection) leaderboardSection.style.display = "none";
+  if (votersSection) votersSection.style.display = "none";
 }
 
 function showLeaderboardSection() {
   if (loadingScreen) loadingScreen.style.display = "none";
   if (comparisonScreen) comparisonScreen.style.display = "none";
   if (leaderboardSection) leaderboardSection.style.display = "block";
+  if (votersSection) votersSection.style.display = "none";
+}
+
+function showVotersSection() {
+  if (loadingScreen) loadingScreen.style.display = "none";
+  if (comparisonScreen) comparisonScreen.style.display = "none";
+  if (leaderboardSection) leaderboardSection.style.display = "none";
+  if (votersSection) votersSection.style.display = "block";
 }
 
 function setVersionBadge() {
@@ -186,6 +200,36 @@ async function renderLeaderboard() {
   }
 }
 
+async function renderVoters() {
+  if (!votersBody) return;
+  votersBody.innerHTML = "";
+  if (votersStatus) votersStatus.textContent = "Loading…";
+  try {
+    const rows = await backend.fetchVoterCounts(GAME_ID);
+    if (!rows || rows.length === 0) {
+      if (votersStatus) votersStatus.textContent = "No votes yet.";
+      return;
+    }
+    if (votersStatus) votersStatus.textContent = "";
+    rows.forEach((row, idx) => {
+      const tr = document.createElement("tr");
+      const t = (v) => {
+        const td = document.createElement("td");
+        td.textContent = v;
+        return td;
+      };
+      tr.appendChild(t(idx + 1));
+      tr.appendChild(t(row.name || "Unknown"));
+      tr.appendChild(t(row.count));
+      votersBody.appendChild(tr);
+    });
+    state.hasLoadedVoters = true;
+  } catch (err) {
+    console.error(err);
+    if (votersStatus) votersStatus.textContent = "Could not load voters.";
+  }
+}
+
 function activateTab(tab) {
   state.activeTab = tab;
   tabButtons.forEach((btn) => {
@@ -196,6 +240,11 @@ function activateTab(tab) {
     showLeaderboardSection();
     if (!state.hasLoadedLeaderboard) {
       renderLeaderboard();
+    }
+  } else if (tab === "voters") {
+    showVotersSection();
+    if (!state.hasLoadedVoters) {
+      renderVoters();
     }
   } else {
     showGame();

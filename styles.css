@@ -941,6 +941,37 @@ h1{margin:18px 0 6px;color:var(--accent)}
 #leaderboardTable td{color:#e6e9ee;}
 #leaderboardTable tr:hover td{background:#1e90ff22;}
 
+#voters-section{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  max-width:1100px;
+  width:100%;
+  margin:0 auto;
+}
+#voters-section .leaderboard-table-wrap{
+  width:min(960px,100%);
+}
+#votersTable{
+  width:100%;
+  border-collapse:collapse;
+  margin:0 auto;
+}
+#votersTable th,
+#votersTable td{
+  padding:10px;
+  border-bottom:1px solid #2a2f37;
+  text-align:center;
+}
+#votersTable th{
+  color:var(--accent);
+  font-weight:600;
+  border-bottom:2px solid #1e90ff33;
+}
+#votersTable td{color:#e6e9ee;}
+#votersTable tr:hover td{background:#1e90ff22;}
+
 /* Tabs */
 .tab-bar{
   display:inline-flex;

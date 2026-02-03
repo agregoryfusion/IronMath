@@ -68,6 +68,31 @@ async function fetchLeaderboard(gameId = 1, limit = null) {
   return (data || []).map(normalizeItem);
 }
 
+async function fetchVoterCounts(gameId = 1) {
+  // supabase-js v2 no longer supports .group(); fetch and aggregate client-side
+  const { data, error } = await supabase
+    .from(TABLES.votes)
+    .select("voter_name")
+    .eq("game_id", gameId)
+    .not("voter_name", "is", null)
+    .limit(10000);
+
+  if (error) {
+    console.error("fetchVoterCounts error", error);
+    throw error;
+  }
+
+  const tally = {};
+  (data || []).forEach((r) => {
+    const name = r.voter_name || "Unknown";
+    tally[name] = (tally[name] || 0) + 1;
+  });
+
+  return Object.entries(tally)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
 function randomPick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -115,6 +140,7 @@ async function submitVote({ winnerId, loserId, userId = null, playerName = null,
 FM.backendComparisoning = {
   loadItems,
   fetchLeaderboard,
+  fetchVoterCounts,
   pickPair,
   submitVote,
   MATCH_GAP_CAP
