@@ -156,6 +156,12 @@ async function renderLeaderboard() {
       return;
     }
     if (leaderboardStatus) leaderboardStatus.textContent = "";
+    const formatRatio = (w, l) => {
+      if (!Number.isFinite(w) || !Number.isFinite(l)) return "—";
+      if (l === 0) return w > 0 ? "∞" : "—";
+      return (w / l).toFixed(2);
+    };
+
     rows.forEach((row, idx) => {
       const tr = document.createElement("tr");
       const t = (v) => {
@@ -165,12 +171,10 @@ async function renderLeaderboard() {
       };
       tr.appendChild(t(idx + 1));
       tr.appendChild(t(row.name));
-      tr.appendChild(t(Math.round(row.rating)));
       tr.appendChild(t(row.wins));
       tr.appendChild(t(row.losses));
+      tr.appendChild(t(formatRatio(row.wins, row.losses)));
       tr.appendChild(t(row.matches));
-      const last = row.lastPlayed ? new Date(row.lastPlayed) : null;
-      tr.appendChild(t(last ? last.toLocaleDateString() : "—"));
       leaderboardBody.appendChild(tr);
     });
     state.hasLoadedLeaderboard = true;
