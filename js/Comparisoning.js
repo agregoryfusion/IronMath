@@ -161,6 +161,7 @@ async function renderLeaderboard() {
       if (l === 0) return w > 0 ? "∞" : "—";
       return (w / l).toFixed(2);
     };
+    const formatMMR = (r) => (Number.isFinite(r) ? Math.round(r) : "—");
 
     rows.forEach((row, idx) => {
       const tr = document.createElement("tr");
@@ -175,6 +176,7 @@ async function renderLeaderboard() {
       tr.appendChild(t(row.losses));
       tr.appendChild(t(formatRatio(row.wins, row.losses)));
       tr.appendChild(t(row.matches));
+      tr.appendChild(t(formatMMR(row.rating)));
       leaderboardBody.appendChild(tr);
     });
     state.hasLoadedLeaderboard = true;
