@@ -334,6 +334,10 @@ h1{margin:18px 0 6px;color:var(--accent)}
   cursor:pointer;
   transition:all .2s ease;
 }
+.ghost-btn.small{
+  padding:8px 14px;
+  font-size:14px;
+}
 .ghost-btn:hover{
   background:#1e90ff22;
   filter:none;
@@ -901,8 +905,56 @@ h1{margin:18px 0 6px;color:var(--accent)}
   font-weight:700;
 }
 .error-text{color:#ff9f9f;}
+.success-text{color:#7fdca2;}
 .leaderboard-table-wrap{
   overflow-x:auto;
+}
+
+.submission-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(9,12,16,0.75);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  z-index:1000;
+}
+.submission-card{
+  width:min(520px, 100%);
+  text-align:left;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.submission-card h3{
+  margin:0;
+  color:var(--accent);
+}
+.submission-label{
+  font-size:13px;
+  color:var(--muted);
+  font-weight:600;
+}
+.submission-input{
+  width:100%;
+  padding:12px 14px;
+  border-radius:10px;
+  border:1px solid #2c333f;
+  background:var(--input);
+  color:#fff;
+  font-size:16px;
+}
+.submission-input:focus{
+  outline:none;
+  border-color:var(--accent2);
+  box-shadow:0 0 12px rgba(0,191,255,0.35);
+}
+.submission-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  flex-wrap:wrap;
 }
 
 #leaderboard-section{
@@ -973,6 +1025,16 @@ h1{margin:18px 0 6px;color:var(--accent)}
 #votersTable tr:hover td{background:#1e90ff22;}
 
 /* Tabs */
+.tab-bar-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  margin:8px auto 14px;
+  max-width:1100px;
+  padding:0 18px;
+  flex-wrap:wrap;
+}
 .tab-bar{
   display:inline-flex;
   gap:8px;
@@ -980,7 +1042,7 @@ h1{margin:18px 0 6px;color:var(--accent)}
   background:var(--panel);
   border:1px solid #222836;
   border-radius:12px;
-  margin:8px auto 14px;
+  margin:0;
 }
 .tab-btn{
   background:transparent;
@@ -999,6 +1061,29 @@ h1{margin:18px 0 6px;color:var(--accent)}
   background:#152033;
 }
 .tab-btn:hover{color:#fff;border-color:var(--accent);}
+
+.submit-item-wrap{
+  margin-left:auto;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:4px;
+}
+.submit-item-btn{white-space:nowrap;}
+.submit-lockout{
+  max-width:280px;
+  text-align:right;
+}
+
+@media (max-width:640px){
+  .tab-bar-row{justify-content:center;}
+  .submit-item-wrap{
+    margin-left:0;
+    align-items:center;
+    width:100%;
+  }
+  .submit-lockout{text-align:center;}
+}
 
 /* Timeline list */
 .timeline-list{

@@ -16,10 +16,16 @@
 
   <h1>Whats Better?</h1>
 
-  <div class="tab-bar">
-    <button class="tab-btn active" data-tab="game">Game</button>
-    <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
-    <button class="tab-btn" data-tab="voters">Voters</button>
+  <div class="tab-bar-row">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="game">Game</button>
+      <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
+      <button class="tab-btn" data-tab="voters">Voters</button>
+    </div>
+    <div class="submit-item-wrap">
+      <button id="submitItemBtn" class="ghost-btn small submit-item-btn" style="display:none">Submit Item</button>
+      <div id="submitLockoutMsg" class="muted small submit-lockout" style="display:none"></div>
+    </div>
   </div>
 
   <div id="loading-screen">
@@ -81,6 +87,22 @@
     </section>
 
   <div id="unauthorized-screen" class="panel" style="display:none"></div>
+
+  <div id="submissionOverlay" class="submission-overlay" style="display:none">
+    <div class="submission-card panel">
+      <h3>Submit an item</h3>
+      <p class="muted small">You get one submission each week (Sunday-Saturday). New items must be approved before they appear in the game or on the leaderboard.</p>
+      <p class="muted small">Items that are too similar to existing items will be bounced back. If you think this is a mistake, come talk to Alex.</p>
+      <label class="submission-label" for="submissionInput">Item name</label>
+      <input id="submissionInput" class="submission-input" type="text" maxlength="60" placeholder="e.g., Chocolate Mousse" />
+      <p id="submissionError" class="error-text small"></p>
+      <p id="submissionSuccess" class="success-text small"></p>
+      <div class="submission-actions">
+        <button id="submissionCancelBtn" class="ghost-btn small">Cancel</button>
+        <button id="submissionConfirmBtn" class="primary-btn small">Submit</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="js/auth_Comparisoning.js"></script>
 </body>

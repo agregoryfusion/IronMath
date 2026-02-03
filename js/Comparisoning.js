@@ -24,6 +24,17 @@ const leftName = document.getElementById("leftName");
 const rightName = document.getElementById("rightName");
 const leftVoteBtn = document.getElementById("leftVoteBtn");
 const rightVoteBtn = document.getElementById("rightVoteBtn");
+const submitItemBtn = document.getElementById("submitItemBtn");
+const submitLockoutMsg = document.getElementById("submitLockoutMsg");
+const submissionOverlay = document.getElementById("submissionOverlay");
+const submissionInput = document.getElementById("submissionInput");
+const submissionError = document.getElementById("submissionError");
+const submissionSuccess = document.getElementById("submissionSuccess");
+const submissionCancelBtn = document.getElementById("submissionCancelBtn");
+const submissionConfirmBtn = document.getElementById("submissionConfirmBtn");
+
+const SIMILARITY_THRESHOLD = 0.25;
+const MAX_SUBMISSION_LENGTH = 60;
 
 const state = {
   items: [],
@@ -37,6 +48,14 @@ const state = {
     playerName: "Player",
     isTeacher: false,
     isStudent: false
+  },
+  submission: {
+    canSubmit: false,
+    hasChecked: false,
+    weekStart: null,
+    weekEnd: null,
+    items: [],
+    isOpen: false
   }
 };
 
@@ -83,6 +102,165 @@ function setVersionBadge() {
   }
 }
 
+function clearSubmissionFeedback() {
+  if (submissionError) submissionError.textContent = "";
+  if (submissionSuccess) submissionSuccess.textContent = "";
+}
+
+function setSubmissionError(msg) {
+  if (submissionError) submissionError.textContent = msg || "";
+  if (submissionSuccess) submissionSuccess.textContent = "";
+}
+
+function setSubmissionSuccess(msg) {
+  if (submissionSuccess) submissionSuccess.textContent = msg || "";
+  if (submissionError) submissionError.textContent = "";
+}
+
+function getWeekBounds(dateObj = new Date()) {
+  const base = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+  const day = base.getDay(); // 0 = Sunday
+  const start = new Date(base);
+  start.setDate(base.getDate() - day);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function normalizeSubmissionText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function damerauLevenshtein(a, b) {
+  const s = a || "";
+  const t = b || "";
+  const sLen = s.length;
+  const tLen = t.length;
+  if (sLen === 0) return tLen;
+  if (tLen === 0) return sLen;
+
+  const dp = Array.from({ length: sLen + 1 }, () => new Array(tLen + 1).fill(0));
+  for (let i = 0; i <= sLen; i += 1) dp[i][0] = i;
+  for (let j = 0; j <= tLen; j += 1) dp[0][j] = j;
+
+  for (let i = 1; i <= sLen; i += 1) {
+    for (let j = 1; j <= tLen; j += 1) {
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+      let best = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+      if (i > 1 && j > 1 && s[i - 1] === t[j - 2] && s[i - 2] === t[j - 1]) {
+        best = Math.min(best, dp[i - 2][j - 2] + cost);
+      }
+      dp[i][j] = best;
+    }
+  }
+  return dp[sLen][tLen];
+}
+
+function findSimilarItem(candidate, items = []) {
+  const normalized = normalizeSubmissionText(candidate);
+  if (!normalized) return null;
+  let bestScore = Infinity;
+  let bestItem = null;
+
+  items.forEach((item) => {
+    const nameNorm = item.normalizedName || normalizeSubmissionText(item.name);
+    if (!nameNorm) return;
+    const dist = damerauLevenshtein(normalized, nameNorm);
+    const score = dist / Math.max(normalized.length, nameNorm.length, 1);
+    if (score < bestScore) {
+      bestScore = score;
+      bestItem = item;
+    }
+  });
+
+  if (bestItem && bestScore <= SIMILARITY_THRESHOLD) {
+    return { item: bestItem, score: bestScore };
+  }
+  return null;
+}
+
+function setSubmissionControlsDisabled(disabled) {
+  if (submissionInput) submissionInput.disabled = disabled;
+  if (submissionConfirmBtn) submissionConfirmBtn.disabled = disabled;
+  if (submissionCancelBtn) submissionCancelBtn.disabled = disabled;
+}
+
+function toggleSubmissionOverlay(show) {
+  state.submission.isOpen = !!show;
+  if (submissionOverlay) submissionOverlay.style.display = show ? "flex" : "none";
+  if (show) {
+    clearSubmissionFeedback();
+    if (submissionInput) {
+      submissionInput.value = "";
+      submissionInput.focus();
+    }
+  }
+}
+
+function prepareSubmissionItems(rows = []) {
+  return rows.map((row) => ({
+    ...row,
+    normalizedName: normalizeSubmissionText(row.name)
+  }));
+}
+
+async function ensureSubmissionItemsLoaded() {
+  if (state.submission.items && state.submission.items.length) return;
+  if (!backend.fetchSubmissionItems) return;
+  const rows = await backend.fetchSubmissionItems(GAME_ID);
+  state.submission.items = prepareSubmissionItems(rows || []);
+}
+
+function getExtraSubmissionVotesRemaining() {
+  return null;
+}
+
+function updateSubmissionLockout() {
+  if (!submitLockoutMsg) return;
+  const remaining = getExtraSubmissionVotesRemaining();
+  if (!state.submission.canSubmit && Number.isFinite(remaining)) {
+    const needed = Math.max(0, Math.ceil(remaining));
+    submitLockoutMsg.textContent = `You can earn another submission by voting ${needed} more times.`;
+    submitLockoutMsg.style.display = "block";
+    return;
+  }
+  submitLockoutMsg.textContent = "";
+  submitLockoutMsg.style.display = "none";
+}
+
+async function refreshSubmissionEligibility() {
+  if (!submitItemBtn || !backend.fetchUserSubmissionsInRange) return;
+  const { start, end } = getWeekBounds();
+  state.submission.weekStart = start;
+  state.submission.weekEnd = end;
+  try {
+    const rows = await backend.fetchUserSubmissionsInRange({
+      playerName: state.user.playerName,
+      gameId: GAME_ID,
+      startIso: start.toISOString(),
+      endIso: end.toISOString()
+    });
+    const hasSubmitted = Array.isArray(rows) && rows.length > 0;
+    state.submission.canSubmit = !hasSubmitted;
+    submitItemBtn.style.display = state.submission.canSubmit ? "inline-flex" : "none";
+  } catch (err) {
+    console.error(err);
+    submitItemBtn.style.display = "none";
+  } finally {
+    updateSubmissionLockout();
+  }
+}
+
 function renderPair(pair) {
   if (!pair || pair.length < 2) {
     setStatus("Not enough items to compare yet.", true);
@@ -109,6 +287,14 @@ function applyRatingUpdate(itemId, newRating) {
   }
 }
 
+function isSubmittedByPlayer(item, playerName) {
+  if (!item || !playerName) return false;
+  const submitted = String(item.submittedBy || "").trim().toLowerCase();
+  const player = String(playerName || "").trim().toLowerCase();
+  if (!submitted || !player) return false;
+  return submitted === player;
+}
+
 function choosePair() {
   if (!backend.pickPair) return;
   const pair = backend.pickPair(state.items, state.lastPairIds);
@@ -120,12 +306,78 @@ function choosePair() {
 async function refreshItemsAndPair() {
   try {
     showLoading();
-    state.items = await backend.loadItems(GAME_ID);
+    const rows = await backend.loadItems(GAME_ID);
+    state.items = (rows || []).filter((item) => !isSubmittedByPlayer(item, state.user.playerName));
     choosePair();
     showGame();
   } catch (err) {
     console.error(err);
     setStatus("Could not load items. Please try again.", true);
+  }
+}
+
+async function openSubmissionOverlay() {
+  if (!state.submission.canSubmit) return;
+  toggleSubmissionOverlay(true);
+  try {
+    await ensureSubmissionItemsLoaded();
+  } catch (err) {
+    console.error(err);
+    setSubmissionError("Could not load existing items. Please try again.");
+  }
+}
+
+async function handleSubmissionConfirm() {
+  clearSubmissionFeedback();
+  if (!state.submission.canSubmit) {
+    setSubmissionError("You already submitted an item this week.");
+    return;
+  }
+
+  const rawValue = submissionInput ? submissionInput.value : "";
+  const name = String(rawValue || "").trim();
+
+  if (!name) {
+    setSubmissionError("Please enter an item name.");
+    return;
+  }
+  if (name.length > MAX_SUBMISSION_LENGTH) {
+    setSubmissionError(`Please keep it under ${MAX_SUBMISSION_LENGTH} characters.`);
+    return;
+  }
+
+  setSubmissionControlsDisabled(true);
+  try {
+    await ensureSubmissionItemsLoaded();
+    const similar = findSimilarItem(name, state.submission.items);
+    if (similar) {
+      setSubmissionError(`That is too similar to an existing item: ${similar.item.name}. If you think this is a mistake, come talk to Alex.`);
+      return;
+    }
+
+    const newItem = await backend.submitComparisonItem({
+      name,
+      submittedBy: state.user.playerName,
+      gameId: GAME_ID
+    });
+
+    state.submission.items.unshift({
+      ...newItem,
+      normalizedName: normalizeSubmissionText(newItem.name)
+    });
+
+    setSubmissionSuccess("Submitted! Your item will appear once approved.");
+    state.submission.canSubmit = false;
+    if (submitItemBtn) submitItemBtn.style.display = "none";
+    updateSubmissionLockout();
+
+    setTimeout(() => toggleSubmissionOverlay(false), 900);
+  } catch (err) {
+    console.error(err);
+    const isDuplicate = err && err.code === "23505";
+    setSubmissionError(isDuplicate ? "That item already exists." : "Could not submit item. Please try again.");
+  } finally {
+    setSubmissionControlsDisabled(false);
   }
 }
 
@@ -232,6 +484,7 @@ async function renderVoters() {
 
 function activateTab(tab) {
   state.activeTab = tab;
+  if (state.submission.isOpen) toggleSubmissionOverlay(false);
   tabButtons.forEach((btn) => {
     const isActive = btn.dataset.tab === tab;
     btn.classList.toggle("active", isActive);
@@ -258,6 +511,29 @@ function wireEvents() {
   tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => activateTab(btn.dataset.tab));
   });
+
+  if (submitItemBtn) submitItemBtn.addEventListener("click", openSubmissionOverlay);
+  if (submissionCancelBtn) submissionCancelBtn.addEventListener("click", () => toggleSubmissionOverlay(false));
+  if (submissionConfirmBtn) submissionConfirmBtn.addEventListener("click", handleSubmissionConfirm);
+  if (submissionOverlay) {
+    submissionOverlay.addEventListener("click", (e) => {
+      if (e.target === submissionOverlay) toggleSubmissionOverlay(false);
+    });
+  }
+  if (submissionInput) {
+    submissionInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleSubmissionConfirm();
+      }
+    });
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && state.submission.isOpen) {
+      toggleSubmissionOverlay(false);
+    }
+  });
 }
 
 function showUnauthorized(message) {
@@ -277,6 +553,7 @@ async function bootstrap(userCtx) {
   setVersionBadge();
   wireEvents();
   await refreshItemsAndPair();
+  await refreshSubmissionEligibility();
   activateTab("game");
 }
 

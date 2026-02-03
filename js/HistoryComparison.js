@@ -81,6 +81,14 @@ function applyRatingUpdate(itemId, newRating) {
   if (target && Number.isFinite(newRating)) target.rating = Number(newRating);
 }
 
+function isSubmittedByPlayer(item, playerName) {
+  if (!item || !playerName) return false;
+  const submitted = String(item.submittedBy || "").trim().toLowerCase();
+  const player = String(playerName || "").trim().toLowerCase();
+  if (!submitted || !player) return false;
+  return submitted === player;
+}
+
 function choosePair() {
   if (!backend.pickPair) return;
   const pair = backend.pickPair(state.items, state.lastPairIds);
@@ -92,7 +100,8 @@ function choosePair() {
 async function refreshItemsAndPair() {
   try {
     showLoading();
-    state.items = await backend.loadItems(GAME_ID);
+    const rows = await backend.loadItems(GAME_ID);
+    state.items = (rows || []).filter((item) => !isSubmittedByPlayer(item, state.user.playerName));
     choosePair();
     await renderTimeline();
     showGame();

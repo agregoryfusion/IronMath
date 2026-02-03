@@ -29,15 +29,19 @@ function normalizeItem(r) {
     losses: Number(r.losses ?? 0),
     matches: Number(r.matches ?? 0),
     lastPlayed: r.last_played ? new Date(r.last_played) : null,
-    updatedAt: r.updated_at ? new Date(r.updated_at) : null
+    updatedAt: r.updated_at ? new Date(r.updated_at) : null,
+    approved: r.approved ?? null,
+    submittedBy: r.submitted_by ?? null,
+    createdAt: r.created_at ? new Date(r.created_at) : null
   };
 }
 
 async function loadItems(gameId = 1, limit = 200) {
   const { data, error } = await supabase
     .from(TABLES.items)
-    .select("item_id,name,category,rating,wins,losses,matches,last_played,updated_at,game_id")
+    .select("item_id,name,category,rating,wins,losses,matches,last_played,updated_at,game_id,approved,submitted_by,created_at")
     .eq("game_id", gameId)
+    .eq("approved", true)
     .order("rating", { ascending: false })
     .limit(limit);
 
@@ -51,8 +55,9 @@ async function loadItems(gameId = 1, limit = 200) {
 async function fetchLeaderboard(gameId = 1, limit = null) {
   let query = supabase
     .from(TABLES.items)
-    .select("item_id,name,category,rating,wins,losses,matches,last_played")
+    .select("item_id,name,category,rating,wins,losses,matches,last_played,approved")
     .eq("game_id", gameId)
+    .eq("approved", true)
     .order("rating", { ascending: false });
 
   if (Number.isFinite(limit) && limit > 0) {
@@ -66,6 +71,62 @@ async function fetchLeaderboard(gameId = 1, limit = null) {
     throw error;
   }
   return (data || []).map(normalizeItem);
+}
+
+async function fetchSubmissionItems(gameId = 1, limit = 2000) {
+  const { data, error } = await supabase
+    .from(TABLES.items)
+    .select("item_id,name,category,approved,submitted_by,created_at,game_id")
+    .eq("game_id", gameId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("fetchSubmissionItems error", error);
+    throw error;
+  }
+  return (data || []).map(normalizeItem);
+}
+
+async function fetchUserSubmissionsInRange({ playerName, gameId = 1, startIso = null, endIso = null }) {
+  if (!playerName) return [];
+  let query = supabase
+    .from(TABLES.items)
+    .select("item_id,name,submitted_by,created_at,approved,game_id")
+    .eq("game_id", gameId)
+    .eq("submitted_by", playerName);
+
+  if (startIso) query = query.gte("created_at", startIso);
+  if (endIso) query = query.lte("created_at", endIso);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("fetchUserSubmissionsInRange error", error);
+    throw error;
+  }
+  return (data || []).map(normalizeItem);
+}
+
+async function submitComparisonItem({ name, category = null, submittedBy = null, gameId = 1 }) {
+  const payload = {
+    game_id: gameId,
+    name,
+    submitted_by: submittedBy,
+    approved: false
+  };
+  if (category) payload.category = category;
+
+  const { data, error } = await supabase
+    .from(TABLES.items)
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("submitComparisonItem error", error);
+    throw error;
+  }
+  return normalizeItem(data);
 }
 
 async function fetchVoterCounts(gameId = 1) {
@@ -140,6 +201,9 @@ async function submitVote({ winnerId, loserId, userId = null, playerName = null,
 FM.backendComparisoning = {
   loadItems,
   fetchLeaderboard,
+  fetchSubmissionItems,
+  fetchUserSubmissionsInRange,
+  submitComparisonItem,
   fetchVoterCounts,
   pickPair,
   submitVote,

@@ -7,6 +7,8 @@ create table if not exists comparison_items (
   name text not null unique,
   category text default 'General',
   event_year integer, -- optional: for timeline weighting
+  submitted_by text, -- student's first + last name (for weekly submission tracking)
+  approved boolean not null default false,
   rating numeric not null default 1000,          -- Elo-style rating
   rating_deviation numeric not null default 350, -- reserved for possible TrueSkill-style math
   wins integer not null default 0,
@@ -17,6 +19,14 @@ create table if not exists comparison_items (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Backfill new columns if the table already existed
+alter table comparison_items add column if not exists submitted_by text;
+alter table comparison_items add column if not exists approved boolean;
+alter table comparison_items alter column approved set default false;
+update comparison_items
+  set approved = true
+  where submitted_by is null and (approved is null or approved = false);
 
 -- Each recorded vote (winner vs loser)
 create table if not exists comparison_votes (
@@ -38,6 +48,7 @@ create index if not exists comparison_votes_created_idx on comparison_votes(crea
 create index if not exists comparison_items_rating_idx on comparison_items(rating desc);
 create index if not exists comparison_items_game_idx on comparison_items(game_id, rating desc);
 create index if not exists comparison_votes_game_idx on comparison_votes(game_id, created_at desc);
+create index if not exists comparison_items_approved_idx on comparison_items(game_id, approved, rating desc);
 
 -- Atomic rating update for a single vote. Returns the new ratings for both items.
 create or replace function comparison_submit_vote(
@@ -73,11 +84,18 @@ begin
     raise exception 'Winner and loser must be different item ids';
   end if;
 
-  select * into w from comparison_items where item_id = p_winner_id and game_id = p_game_id for update;
-  select * into l from comparison_items where item_id = p_loser_id and game_id = p_game_id for update;
+  select * into w from comparison_items where item_id = p_winner_id and game_id = p_game_id and approved = true for update;
+  select * into l from comparison_items where item_id = p_loser_id and game_id = p_game_id and approved = true for update;
 
   if w is null or l is null then
     raise exception 'One or both items do not exist in this game';
+  end if;
+
+  if p_voter_name is not null then
+    if lower(coalesce(w.submitted_by,'')) = lower(p_voter_name)
+      or lower(coalesce(l.submitted_by,'')) = lower(p_voter_name) then
+      raise exception 'Cannot vote for your own submitted items';
+    end if;
   end if;
 
   w_before := w.rating;
@@ -160,73 +178,73 @@ end;
 $$;
 
 -- Seed data: 16 desserts (Game 1). Safe to re-run.
-insert into comparison_items (game_id, name, category, event_year)
+insert into comparison_items (game_id, name, category, event_year, approved)
 values
-(1, 'Chocolate Cake', 'Dessert', null),
-(1, 'Cheesecake', 'Dessert', null),
-(1, 'Apple Pie', 'Dessert', null),
-(1, 'Brownies', 'Dessert', null),
-(1, 'Ice Cream', 'Dessert', null),
-(1, 'Tiramisu', 'Dessert', null),
-(1, 'Creme Brulee', 'Dessert', null),
-(1, 'Donuts', 'Dessert', null),
-(1, 'Cupcakes', 'Dessert', null),
-(1, 'Gelato', 'Dessert', null),
-(1, 'Macarons', 'Dessert', null),
-(1, 'Pecan Pie', 'Dessert', null),
-(1, 'Key Lime Pie', 'Dessert', null),
-(1, 'Banana Split', 'Dessert', null),
-(1, 'Cinnamon Roll', 'Dessert', null),
-(1, 'Bread Pudding', 'Dessert', null)
+(1, 'Chocolate Cake', 'Dessert', null, true),
+(1, 'Cheesecake', 'Dessert', null, true),
+(1, 'Apple Pie', 'Dessert', null, true),
+(1, 'Brownies', 'Dessert', null, true),
+(1, 'Ice Cream', 'Dessert', null, true),
+(1, 'Tiramisu', 'Dessert', null, true),
+(1, 'Creme Brulee', 'Dessert', null, true),
+(1, 'Donuts', 'Dessert', null, true),
+(1, 'Cupcakes', 'Dessert', null, true),
+(1, 'Gelato', 'Dessert', null, true),
+(1, 'Macarons', 'Dessert', null, true),
+(1, 'Pecan Pie', 'Dessert', null, true),
+(1, 'Key Lime Pie', 'Dessert', null, true),
+(1, 'Banana Split', 'Dessert', null, true),
+(1, 'Cinnamon Roll', 'Dessert', null, true),
+(1, 'Bread Pudding', 'Dessert', null, true)
 on conflict (name) do nothing;
 
 -- Additional desserts for Game 1
-insert into comparison_items (game_id, name, category, event_year)
+insert into comparison_items (game_id, name, category, event_year, approved)
 values
-(1, 'Ice Cream', 'Dessert', null),
-(1, 'Milkshake', 'Dessert', null),
-(1, 'Chocolate Chip Cookie', 'Dessert', null),
-(1, 'Sugar Cookie', 'Dessert', null),
-(1, 'Oatmeal-Rasin Cookie', 'Dessert', null),
-(1, 'Brownies', 'Dessert', null),
-(1, 'Blondies', 'Dessert', null),
-(1, 'Birthday Cake', 'Dessert', null),
-(1, 'Cupcakes', 'Dessert', null),
-(1, 'Cheesecake', 'Dessert', null),
-(1, 'Apple Pie', 'Dessert', null),
-(1, 'Pumpkin Pie', 'Dessert', null),
-(1, 'Pecan Pie', 'Dessert', null),
-(1, 'Molten Chocolate Lava Cake', 'Dessert', null),
-(1, 'Chocolate Cake', 'Dessert', null),
-(1, 'Fudge', 'Dessert', null),
-(1, 'Yellow Cake', 'Dessert', null),
-(1, 'Donuts', 'Dessert', null),
-(1, 'Cinnamon Rolls', 'Dessert', null),
-(1, 'Fruit Cobbler', 'Dessert', null),
-(1, 'Pudding', 'Dessert', null),
-(1, 'Popsicles', 'Dessert', null),
-(1, 'Ice Cream Sandwiches', 'Dessert', null),
-(1, 'S''mores', 'Dessert', null),
-(1, 'Funnel Cake', 'Dessert', null)
+(1, 'Ice Cream', 'Dessert', null, true),
+(1, 'Milkshake', 'Dessert', null, true),
+(1, 'Chocolate Chip Cookie', 'Dessert', null, true),
+(1, 'Sugar Cookie', 'Dessert', null, true),
+(1, 'Oatmeal-Rasin Cookie', 'Dessert', null, true),
+(1, 'Brownies', 'Dessert', null, true),
+(1, 'Blondies', 'Dessert', null, true),
+(1, 'Birthday Cake', 'Dessert', null, true),
+(1, 'Cupcakes', 'Dessert', null, true),
+(1, 'Cheesecake', 'Dessert', null, true),
+(1, 'Apple Pie', 'Dessert', null, true),
+(1, 'Pumpkin Pie', 'Dessert', null, true),
+(1, 'Pecan Pie', 'Dessert', null, true),
+(1, 'Molten Chocolate Lava Cake', 'Dessert', null, true),
+(1, 'Chocolate Cake', 'Dessert', null, true),
+(1, 'Fudge', 'Dessert', null, true),
+(1, 'Yellow Cake', 'Dessert', null, true),
+(1, 'Donuts', 'Dessert', null, true),
+(1, 'Cinnamon Rolls', 'Dessert', null, true),
+(1, 'Fruit Cobbler', 'Dessert', null, true),
+(1, 'Pudding', 'Dessert', null, true),
+(1, 'Popsicles', 'Dessert', null, true),
+(1, 'Ice Cream Sandwiches', 'Dessert', null, true),
+(1, 'S''mores', 'Dessert', null, true),
+(1, 'Funnel Cake', 'Dessert', null, true)
 on conflict (name) do nothing;
 
 -- Seed data: 16 historical events (Game 2)
-insert into comparison_items (game_id, name, category, event_year)
+insert into comparison_items (game_id, name, category, event_year, approved)
 values
-(2, 'Fall of Rome (476 CE)', 'History', 476),
-(2, 'Magna Carta Signed (1215)', 'History', 1215),
-(2, 'Columbus Reaches Americas (1492)', 'History', 1492),
-(2, 'Protestant Reformation Begins (1517)', 'History', 1517),
-(2, 'American Declaration of Independence (1776)', 'History', 1776),
-(2, 'French Revolution Begins (1789)', 'History', 1789),
-(2, 'US Civil War Ends (1865)', 'History', 1865),
-(2, 'Wright Brothers First Flight (1903)', 'History', 1903),
-(2, 'Start of World War I (1914)', 'History', 1914),
-(2, 'Start of World War II (1939)', 'History', 1939),
-(2, 'Moon Landing (1969)', 'History', 1969),
-(2, 'Fall of Berlin Wall (1989)', 'History', 1989),
-(2, 'Internet Becomes Public (1991)', 'History', 1991),
-(2, '9/11 Attacks (2001)', 'History', 2001),
-(2, 'Global Financial Crisis (2008)', 'History', 2008),
-(2, 'James Webb Telescope Launch (2021)', 'History', 2021)
+(2, 'Fall of Rome (476 CE)', 'History', 476, true),
+(2, 'Magna Carta Signed (1215)', 'History', 1215, true),
+(2, 'Columbus Reaches Americas (1492)', 'History', 1492, true),
+(2, 'Protestant Reformation Begins (1517)', 'History', 1517, true),
+(2, 'American Declaration of Independence (1776)', 'History', 1776, true),
+(2, 'French Revolution Begins (1789)', 'History', 1789, true),
+(2, 'US Civil War Ends (1865)', 'History', 1865, true),
+(2, 'Wright Brothers First Flight (1903)', 'History', 1903, true),
+(2, 'Start of World War I (1914)', 'History', 1914, true),
+(2, 'Start of World War II (1939)', 'History', 1939, true),
+(2, 'Moon Landing (1969)', 'History', 1969, true),
+(2, 'Fall of Berlin Wall (1989)', 'History', 1989, true),
+(2, 'Internet Becomes Public (1991)', 'History', 1991, true),
+(2, '9/11 Attacks (2001)', 'History', 2001, true),
+(2, 'Global Financial Crisis (2008)', 'History', 2008, true),
+(2, 'James Webb Telescope Launch (2021)', 'History', 2021, true)
 on conflict (name) do nothing;
